@@ -1,7 +1,8 @@
 var N = 1
 units = []
 
-x=3
+cursorX = 0
+cursorY = 0
 
 for (var i = 0; i < N; i++) {
   units.push({
@@ -13,25 +14,8 @@ for (var i = 0; i < N; i++) {
 }
 
 function watchCursor(event) {
-  units[0].x = event.clientX
-  units[0].y = event.clientY
-}
-
-function line(x1,y1,x2,y2,c) {
-  context.strokeStyle= c || '#ffffff' 
-  context.moveTo(x1,y1)
-  context.lineTo(x2,y2)
-  context.stroke()
-}
-
-function circle(x,y,r,c) {
-  context.fillStyle = c || '#ffffff' 
-  context.arc(x,y,r,0,2*Math.PI);
-  context.fill();
-}
-
-function clear() {
-  context.clearRect(0,0,canvas.width, canvas.height)
+  cursorX = event.clientX
+  cursorY = event.clientY
 }
 
 function drawUnit(unit) {
@@ -54,6 +38,8 @@ function tick() {
     unit.x += rnd(-1,2)
     unit.y += rnd(-1,2)
   })
+  units[0].x = cursorX
+  units[0].y = cursorY
   frame()
 }
 
