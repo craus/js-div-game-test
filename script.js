@@ -1,8 +1,53 @@
-var N = 1
+var N = 10
 units = []
 
 cursorX = 0
 cursorY = 0
+
+ui = {
+  newCircle: function() {
+    result = $('#circle')[0].cloneNode(true)
+    $('#field')[0].appendChild(result)
+    return result
+  }
+}
+
+space = {
+  tickTime: 1
+}
+
+units.push(tank = {
+  x: 0,
+  y: 0,
+  vx: 0,
+  vy: 0,
+  d: 0,
+  vd: 0,
+  k: 0.99,
+  kd: 0.99,
+  details: [
+    {x: 2, y: 0},
+    {x: 0, y: 0},
+    {x: 0, y: 2},
+    {x: 0, y: -2},
+    {x: -2, y: 2},
+    {x: -2, y: -2},
+  ],
+  init: function() {
+    
+  },
+  repaint: function() {
+  },
+  tick: function() {
+    x += vx * space.tickTime
+    y += vy * space.tickTime
+    d += vd * space.tickTime
+    vx *= k
+    vy *= k
+    vd *= kd
+    repaint()
+  },
+})
 
 for (var i = 0; i < N; i++) {
   units.push({
@@ -45,8 +90,7 @@ function tick() {
 
 window.onload = function() {
   units.forEach(function(unit){
-    unit.element = $('#circle')[0].cloneNode(true)
-    $('#field')[0].appendChild(unit.element);
+    unit.element = ui.newCircle()
   })
   setInterval(tick, 1);
 }
