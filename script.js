@@ -17,12 +17,25 @@ ui = {
   }
 }
 
-space = {
-  tickTime: 0.001,
+function createSpace(params) {
+  return $.extend(params, {
+    tickTime: params.speed / params.ticksPerFrame,
+    tick: function() {
+      for (var i = 0; i < this.ticksPerFrame; i++) {
+        units.forEach(function(unit) { unit.tick() })
+      }
+      units.forEach(function(unit) { unit.repaint() })
+    }
+  })
+}
+
+space = createSpace({
+  ticksPerFrame: 100, 
+  speed: 1,
   inc: function(current, derivative) {
     return current + derivative * this.tickTime
   }
-}
+})
 
 function circleDetail(params) {
   return $.extend({
@@ -99,7 +112,6 @@ function createTank(params) {
       this.vx -= this.vx * this.k * space.tickTime
       this.vy -= this.vy * this.k * space.tickTime
       this.vd -= this.vd * this.kd * space.tickTime
-      this.repaint()
     },    
   })
 }
@@ -109,7 +121,7 @@ function initUnits() {
     skid: 0.1, 
     angularSkid: 0.1, 
     rotateRadius: 10,
-    speed: 1000,
+    speed: 100,
     canStop: true,
   }))
 }
@@ -119,7 +131,7 @@ function rnd(min, max) {
 }
 
 function tick() {
-  units.forEach(function(unit) { unit.tick() })
+  space.tick()
 }
 
 window.onload = function() {
