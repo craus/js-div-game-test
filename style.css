@@ -5,6 +5,9 @@
 	font-family: arial;
 	text-align: center;
 	overflow:hidden;
+  border-width:1;
+  border-color:brown;
+  border-style:solid;
 }
 
 #buttons {	
