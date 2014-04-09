@@ -4,6 +4,11 @@ units = []
 cursorX = 0
 cursorY = 0
 
+function watchCursor(event) {
+  cursorX = event.clientX
+  cursorY = event.clientY
+}
+
 ui = {
   newCircle: function() {
     result = $('#circle')[0].cloneNode(true)
@@ -16,62 +21,57 @@ space = {
   tickTime: 1
 }
 
-units.push(tank = {
-  x: 0,
-  y: 0,
-  vx: 0,
-  vy: 0,
-  d: 0,
-  vd: 0,
-  k: 0.99,
-  kd: 0.99,
-  details: [
-    {x: 2, y: 0},
-    {x: 0, y: 0},
-    {x: 0, y: 2},
-    {x: 0, y: -2},
-    {x: -2, y: 2},
-    {x: -2, y: -2},
-  ],
-  init: function() {
-    
-  },
-  repaint: function() {
-  },
-  tick: function() {
-    x += vx * space.tickTime
-    y += vy * space.tickTime
-    d += vd * space.tickTime
-    vx *= k
-    vy *= k
-    vd *= kd
-    repaint()
-  },
-})
+function circleDetail(params) {
+  return $.extend({
+    element: ui.newCircle(), 
+    place: function(x,y,r){
+      this.element.style.left = x - r
+      this.element.style.top = y - r
+      this.element.style.width = 2 * r
+      this.element.style.height = 2 * r
+    },
+  }, params);
+}
 
-for (var i = 0; i < N; i++) {
-  units.push({
-    x: i*10,
-    y: i*20,
-    r: 5,
-    c: '#FF0000'
+function initUnits() {
+  units.push(tank = {
+    x: 300,
+    y: 300,
+    vx: 0.2,
+    vy: 0.2,
+    d: 0,
+    vd: 0.2,
+    k: 0.999,
+    kd: 0.999,
+    sz: 10,
+    details: [
+      {x: 2, y: 0},
+      {x: 0, y: 0},
+      {x: 0, y: 2},
+      {x: 0, y: -2},
+      {x: -2, y: 2},
+      {x: -2, y: -2},
+    ].map(circleDetail),
+    repaint: function() {
+      tank = this
+      this.details.forEach(function(detail){
+        detail.place(
+          tank.x + (detail.x * Math.cos(tank.d) + detail.y * Math.sin(tank.d)) * tank.sz,
+          tank.y + (detail.x * Math.cos(tank.d+Math.PI/2) + detail.y * Math.sin(tank.d+Math.PI/2)) * tank.sz,
+          tank.sz
+        )
+      })
+    },
+    tick: function() {
+      this.x += this.vx * space.tickTime
+      this.y += this.vy * space.tickTime
+      this.d += this.vd * space.tickTime
+      this.vx *= this.k
+      this.vy *= this.k
+      this.vd *= this.kd
+      this.repaint()
+    },
   })
-}
-
-function watchCursor(event) {
-  cursorX = event.clientX
-  cursorY = event.clientY
-}
-
-function drawUnit(unit) {
-  unit.element.style.left = unit.x-unit.r
-  unit.element.style.top = unit.y-unit.r
-  unit.element.style.width = unit.r*2
-  unit.element.style.height = unit.r*2
-}
-
-function frame() {
-  units.forEach(drawUnit)
 }
 
 function rnd(min, max) {
@@ -79,18 +79,10 @@ function rnd(min, max) {
 }
 
 function tick() {
-  units.forEach(function(unit){
-    unit.x += rnd(-1,2)
-    unit.y += rnd(-1,2)
-  })
-  units[0].x = cursorX
-  units[0].y = cursorY
-  frame()
+  units.forEach(function(unit) { unit.tick() })
 }
 
 window.onload = function() {
-  units.forEach(function(unit){
-    unit.element = ui.newCircle()
-  })
-  setInterval(tick, 1);
+  initUnits()
+  setInterval(tick, 1)
 }
