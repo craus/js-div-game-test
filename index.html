@@ -1,6 +1,8 @@
 <head>
 	<link rel="stylesheet" type="text/css" href="style.css">
 	<script src="http://code.jquery.com/jquery-1.11.0.min.js"></script>
+  
+ 	<script src="init.js"></script>
   <script src="monkey_patches.js"></script>
   <script src="com.js"></script>
 	<script src="tank.js"></script>
@@ -10,10 +12,14 @@
 	<script src="ui.js"></script>
  	<script src="cursor_watcher.js"></script>
   
- 	<script src="init.js"></script>
+  
 </head>
 
 <body onmousemove="watchCursor(event)">
-  <div id="circle"></div>
+  <div id="frameCount"></div>
+  <div id="tickCount"></div>
+  <div id="realTime"></div>
+  <div id="fps"></div>
+  <div id="circle" style="visibility: hidden"></div>
   <div id="field"></div>
 </body>
