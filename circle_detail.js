@@ -1,11 +1,12 @@
 function circleDetail(params) {
-  return $.extend({
-    element: ui.newCircle(), 
+  var element = ui.newCircle()
+    
+  return $.extend({ 
     place: function(x,y,r){
-      this.element.style.left = x - r
-      this.element.style.top = y - r
-      this.element.style.width = 2 * r
-      this.element.style.height = 2 * r
+      element.style.left = x - r
+      element.style.top = y - r
+      element.style.width = 2 * r
+      element.style.height = 2 * r
     },
   }, params);
 }
