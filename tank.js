@@ -1,54 +1,3 @@
-var N = 10
-units = []
-
-cursorX = 0
-cursorY = 0
-
-function watchCursor(event) {
-  cursorX = event.clientX
-  cursorY = event.clientY
-}
-
-ui = {
-  newCircle: function() {
-    result = $('#circle')[0].cloneNode(true)
-    $('#field')[0].appendChild(result)
-    return result
-  }
-}
-
-function createSpace(params) {
-  return $.extend(params, {
-    tickTime: params.speed / params.ticksPerFrame,
-    tick: function() {
-      for (var i = 0; i < this.ticksPerFrame; i++) {
-        units.forEach(function(unit) { unit.tick() })
-      }
-      units.forEach(function(unit) { unit.repaint() })
-    }
-  })
-}
-
-space = createSpace({
-  ticksPerFrame: 100, 
-  speed: 1,
-  inc: function(current, derivative) {
-    return current + derivative * this.tickTime
-  }
-})
-
-function circleDetail(params) {
-  return $.extend({
-    element: ui.newCircle(), 
-    place: function(x,y,r){
-      this.element.style.left = x - r
-      this.element.style.top = y - r
-      this.element.style.width = 2 * r
-      this.element.style.height = 2 * r
-    },
-  }, params);
-}
-
 function createTank(params) {
   return $.extend(params, {
     x: 300,
@@ -98,8 +47,12 @@ function createTank(params) {
         this.a = this.minAcceleration; 
       }
     },
+    collide: function() {
+      
+    },
     tick: function() {
       this.control()
+      this.collide()
       
       this.x += this.vx * space.tickTime
       this.y += this.vy * space.tickTime
@@ -114,27 +67,4 @@ function createTank(params) {
       this.vd -= this.vd * this.kd * space.tickTime
     },    
   })
-}
-
-function initUnits() {
-  units.push(tank = createTank({
-    skid: 0.1, 
-    angularSkid: 0.1, 
-    rotateRadius: 10,
-    speed: 100,
-    canStop: true,
-  }))
-}
-
-function rnd(min, max) {
-  return min + Math.floor(Math.random()*(max-min))
-}
-
-function tick() {
-  space.tick()
-}
-
-window.onload = function() {
-  initUnits()
-  setInterval(tick, 1)
 }
