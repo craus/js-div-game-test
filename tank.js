@@ -21,10 +21,7 @@ function createTank(params) {
       {x: -2, y: -2},
     ].map(circleDetail),
     repaint: function() {
-      tank = this
-      this.details.forEach(function(detail){
-        detail.place(tank)
-      })
+      this.details.forEach(call('place', this))
     },
     control: function() {
       angToCursor = Math.atan2(cursorY - this.y, cursorX - this.x)
