@@ -18,7 +18,7 @@ window.onload = function() {
     bounds = createBounds($('#field')[0]),
   ]
   
-  setInterval(space.tick.bind(space), 1)
+  spaceTick = setInterval(space.tick.bind(space), 1)
   
   realTime = 0
   setInterval(function() {

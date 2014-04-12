@@ -6,9 +6,9 @@ function createSpace(params) {
     tick: function() {
       for (var i = 0; i < this.ticksPerFrame; i++) {
         this.tickCount++
-        units.forEach(function(unit) { if (unit.tick) unit.tick() })
+        units.forEach(call('tick'))
       }
-      units.forEach(function(unit) { if (unit.repaint) unit.repaint() })
+      units.forEach(call('repaint'))
       this.frameCount++
       $('#frameCount').text(this.frameCount)
       $('#tickCount').text(this.tickCount)

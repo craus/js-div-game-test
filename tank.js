@@ -23,11 +23,7 @@ function createTank(params) {
     repaint: function() {
       tank = this
       this.details.forEach(function(detail){
-        detail.place(
-          tank.x + (detail.x * Math.cos(tank.d) + detail.y * Math.sin(tank.d)) * tank.sz,
-          tank.y - (detail.x * Math.cos(tank.d+Math.PI/2) + detail.y * Math.sin(tank.d+Math.PI/2)) * tank.sz,
-          tank.sz
-        )
+        detail.place(tank)
       })
     },
     control: function() {
@@ -48,7 +44,9 @@ function createTank(params) {
       }
     },
     collide: function() {
-      
+      // this.details.forEach(function(detail){
+        // if (tank.x 
+      // })
     },
     tick: function() {
       this.control()
