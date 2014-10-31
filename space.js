@@ -1,5 +1,5 @@
 function createSpace(params) {
-  return $.extend(params, {
+  return $.extend({
     tickTime: params.speed / params.ticksPerFrame,
     frameCount: 0,
     tickCount: 0,
@@ -13,5 +13,5 @@ function createSpace(params) {
       $('#frameCount').text(this.frameCount)
       $('#tickCount').text(this.tickCount)
     }
-  })
+  }, params)
 }

@@ -3,9 +3,10 @@
 	<script src="http://code.jquery.com/jquery-1.11.0.min.js"></script>
   
  	<script src="init.js"></script>
-  <script src="monkey_patches.js"></script>
-  <script src="com.js"></script>
+	<script src="monkey_patches.js"></script>
+	<script src="com.js"></script>
 	<script src="tank.js"></script>
+	<script src="unit.js"></script>
 	<script src="space.js"></script>
 	<script src="bounds.js"></script>
 	<script src="circle_detail.js"></script>
@@ -13,15 +14,19 @@
  	<script src="cursor_watcher.js"></script>
  	<script src="combinators.js"></script>
  	<script src="time_controls.js"></script>
+ 	<script src="debug.js"></script>
   
   
 </head>
 
 <body onmousemove="watchCursor(event)">
-  <div id="frameCount"></div>
-  <div id="tickCount"></div>
-  <div id="realTime"></div>
-  <div id="fps"></div>
+  <div class="labels">
+    <div id="frameCount"></div>
+    <div id="tickCount"></div>
+    <div id="realTime"></div>
+    <div id="fps"></div>
+    <div id="debugInfo"></div>
+  </div>
   <div id="circle" style="visibility: hidden"></div>
   <div id="field"></div>
 </body>

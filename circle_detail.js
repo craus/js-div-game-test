@@ -2,14 +2,32 @@ function circleDetail(params) {
   var element = ui.newCircle()
     
   return $.extend({ 
-    place: function(tank){
-      x = tank.x + (this.x * Math.cos(tank.d) + this.y * Math.sin(tank.d)) * tank.sz,
-      y = tank.y - (this.x * Math.cos(tank.d+Math.PI/2) + this.y * Math.sin(tank.d+Math.PI/2)) * tank.sz,
-      r = tank.sz
-      element.style.left = x - r
-      element.style.top = y - r
-      element.style.width = 2 * r
-      element.style.height = 2 * r
+    x: 0,
+    y: 0,
+    globalX: function() { 
+      result = this.unit.x + (this.x * Math.cos(this.unit.d) + this.y * Math.sin(this.unit.d)) * this.unit.sz 
+      //if (isNaN(result)) { debugInfo = ball.x }
+      return result
+    },
+    globalY: function() { 
+      return this.unit.y - (this.x * Math.cos(this.unit.d+Math.PI/2) + this.y * Math.sin(this.unit.d+Math.PI/2)) * this.unit.sz 
+    },
+    globalR: function() { return this.unit.sz },
+    left: function() { return this.globalX() - this.globalR() },
+    top: function() { return this.globalY() - this.globalR() },
+    right: function() { return this.globalX() + this.globalR() },
+    bottom: function() { return this.globalY() + this.globalR() },
+    place: function(){
+      element.style.left = this.globalX() - this.globalR()
+      element.style.top = this.globalY() - this.globalR()
+      element.style.width = 2 * this.globalR()
+      element.style.height = 2 * this.globalR()
+    },
+    collide: function(){
+      if (this.left() < bounds.left) this.unit.force(bounds.k * (bounds.left - this.left()), 0)
+      if (this.top() < bounds.top) this.unit.force(0, bounds.k * (bounds.top - this.top()))
+      if (this.right() > bounds.right) this.unit.force(bounds.k * (bounds.right - this.right()), 0)
+      if (this.bottom() > bounds.bottom) this.unit.force(0, bounds.k * (bounds.bottom - this.bottom()))
     }
   }, params);
 }
