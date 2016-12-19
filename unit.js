@@ -13,7 +13,7 @@ function createUnit(params) {
     aang: 0,
     details: [],
     repaint: function() {
-	  this.details.forEach(call('place'))
+      this.details.forEach(call('place'))
     },
     control: nop,
     collide: function() {
