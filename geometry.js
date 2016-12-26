@@ -1,10 +1,3 @@
-// TODO check angles NOT from I quarter
-// TODO check rectangles with NO zero vertices
-
-// rectangles = [{x1: 0, y1: 0, x2: 7, y2: 1}, {x1: 0, y1: 1, x2: 14, y2: 2}]
-// ellipseSector = {rx: 35, ry: 5, startAngle: Math.atan2(1, 21), endAngle: Math.atan2(3, 14)}
-// result = {x: 14, y: 1, freedom: 0}
-
 (function() {
   const BREAKS_WEIGHT = 1e9
   const PADDING_WEIGHT = 1
