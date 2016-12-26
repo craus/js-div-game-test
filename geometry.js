@@ -78,20 +78,14 @@ var pointInsideSector = function(point, sector) {
   var toTheNonRightFromStart = !toTheRight(radiusVector, sector.startRay.v)
   var toTheNonLeftFromEnd = !toTheRight(sector.endRay.v, radiusVector)
   if (toTheRight(sector.startRay.v, sector.endRay.v)) {
-    console.log("intersection")
     return toTheNonRightFromStart && toTheNonLeftFromEnd
   } else {
-    console.log("union")
     return toTheNonRightFromStart || toTheNonLeftFromEnd
   }
 }
 
 var pointInsideCircleSector = function(point, circleSector) {
-  console.log("call pointInsideCircleSector")
-  console.log("point:", point)
-  console.log("circleSector:", circleSector)
   var result = pointInsideSector(point, circleSector) && pointInsideCircle(point, circleSector)
-  console.log("result: ", result)
   return result
 }
 
@@ -177,10 +171,6 @@ var mapConcat = function(array, callback) {
 }
 
 var fitInCircleSector = function(rectangles, circleSector) {
-  console.log("call fitInCircleSector")
-  rectangles = [{x1: 0, y1: 0, x2: 3, y2: 2}]
-  console.log("rectangles:", rectangles)
-  console.log("circleSector:", circleSector)
   var baseLines = [circleSector.startRay, circleSector.endRay]
   var baseCircles = [{x: circleSector.x, y: circleSector.y, r: circleSector.r}]
   
@@ -233,10 +223,9 @@ var fitInCircleSector = function(rectangles, circleSector) {
   if (acceptablePoint == null) {
     return null;
   }
-  console.log("acceptablePoint: ", acceptablePoint)
   return {
-    dx: acceptablePoint.x,
-    dy: acceptablePoint.y
+    x: acceptablePoint.x,
+    y: acceptablePoint.y
   }
 }
 
@@ -272,15 +261,9 @@ var fitRectanglesToEllipseSector = function(rectangles, ellipseSector) {
   ellipseSector.x = 0
   ellipseSector.y = 0
   rectangles = [{x1: -0.5, y1: -1.5, x2: 20.5, y2: 0.5}]
-  console.log("call fitRectanglesToEllipseSector")
-  console.log("rectangles", rectangles)
-  console.log("ellipseSector", ellipseSector)
   var startRay = rayByAngle(ellipseSector.startAngle)
   var endRay = rayByAngle(ellipseSector.endAngle)
-  console.log("startRay:", startRay)
-  console.log("endRay:", endRay)
   var excentricity = ellipseSector.rx / ellipseSector.ry
-  console.log("excentricity:", excentricity)
   var zoom = {
     x: 1/excentricity,
     y: 1
@@ -293,7 +276,6 @@ var fitRectanglesToEllipseSector = function(rectangles, ellipseSector) {
     startRay: zoomRay(startRay, zoom),
     endRay: zoomRay(endRay, zoom)
   }
-  console.log('circleSector', circleSector)
 
   var circleSectorFitting = fitInCircleSector(
     rectangles.map(function(rectangle) {
@@ -310,16 +292,10 @@ var fitRectanglesToEllipseSector = function(rectangles, ellipseSector) {
     console.log("fitRectanglesToEllipseSector returning null")
     return null
   }
-  return {
-    dx: circleSectorFitting.dx * excentricity,
-    dy: circleSectorFitting.dy
-  }
+  return scale(circleSectorFitting, {x: excentricity, y: 1})
 }
 
 var fitRectanglesToEllipseSectorWithMaxPadding = function(rectangles, ellipseSector) {
-  console.log("call fitRectanglesToEllipseSectorWithMaxPadding")
-  console.log("rectangles:", JSON.stringify(rectangles))
-  console.log("ellipseSector:", ellipseSector)
 
   // var maxPadding = greatestPossible(0, 1e9, function(paddingY) {
   //   return fitRectanglesToEllipseSector(
@@ -328,7 +304,6 @@ var fitRectanglesToEllipseSectorWithMaxPadding = function(rectangles, ellipseSec
   //   ) != null
   // })
   var maxPadding = 0.5
-  console.log("maxPadding:", maxPadding)
   var fitting = fitRectanglesToEllipseSector(
     paddedRectangles(rectangles, maxPadding * X_TO_Y_PADDING, maxPadding),
     ellipseSector
@@ -362,8 +337,6 @@ var classicEllipseSector = function(ellipseSector) {
 }
 
 var fitWithBreaks = function(fitTextRequest, breaksMask) {
-  console.log("mask:", breaksMask)
-  mask = breaksMask
   var cost = 0
   var rectangles = []
   var x = 0
@@ -391,6 +364,12 @@ var fitWithBreaks = function(fitTextRequest, breaksMask) {
     classicEllipseSector(fitTextRequest.ellipseSector)
   )
   result.cost = cost * BREAKS_WEIGHT - result.padding * PADDING_WEIGHT
+  result.offsets = rectangles.map(function(rectangle) {
+    return plus({
+      x: rectangle.x1,
+      y: rectangle.y2
+    }, result.fitting)
+  })
   return result
 }
 
@@ -405,9 +384,9 @@ var fitTextToEllipseSector = function(fitTextRequest) {
     }
   }
   if (best.cost < Number.POSITIVE_INFINITY) {
-    
+    return best.offsets  
   }
-  return best
+  return null
 }
 
 console.log(fitTextToEllipseSector({
