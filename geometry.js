@@ -375,7 +375,9 @@
       }
     }
     if (best.cost < Number.POSITIVE_INFINITY) {
-      return best.offsets  
+      return best.offsets.map(function(p) {
+        return scale(p, {x:1, y:-1})
+      })  
     }
     return null
   }
