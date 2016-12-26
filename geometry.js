@@ -300,7 +300,7 @@
       ellipseSector
     )
     if (fitting == null) {
-      return {padding: -Number.POSITIVE_INFINITY}
+      return null
     }
     return {
       padding: maxPadding,
@@ -354,6 +354,9 @@
       rectangles,
       classicEllipseSector(fitTextRequest.ellipseSector)
     )
+    if (result == null) {
+      return null
+    }
     result.cost = cost * BREAKS_WEIGHT - result.padding * PADDING_WEIGHT
     result.offsets = rectangles.map(function(rectangle) {
       return plus({
@@ -365,16 +368,16 @@
   }
 
   fitTextToEllipseSector = function(fitTextRequest) {
-    var best = {
-      cost: Number.POSITIVE_INFINITY
-    }
+    var best = null
     for (var i = 0; i < (1 << (fitTextRequest.words.length - 1)); i++) {
       var cand = fitWithBreaks(fitTextRequest, i)
-      if (cand.cost < best.cost) {
-        best = cand
+      if (cand != null) {
+        if (best == null || cand.cost < best.cost) {
+          best = cand
+        }
       }
     }
-    if (best.cost < Number.POSITIVE_INFINITY) {
+    if (best != null) {
       return best.offsets.map(function(p) {
         return scale(p, {x:1, y:-1})
       })  
@@ -406,4 +409,19 @@ console.log(fitTextToEllipseSector({
 		startAngle: projectAngle(Math.atan2(2, -21)),
 		endAngle: 0
 	}  
+}))
+
+console.log(fitTextToEllipseSector({
+  spaceWidth: 13874,
+  lineHeight: 33,
+  words: [
+    {length: 8}
+  ],
+  align: 'left',
+  ellipseSector: {
+    rx: 5,
+    ry: 55,
+    startAngle: projectAngle(Math.atan2(5, 11)),
+    endAngle: projectAngle(Math.atan2(-5, 11))
+  }  
 }))
