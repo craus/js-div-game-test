@@ -10,7 +10,7 @@ const PADDING_WEIGHT = 1
 const X_TO_Y_PADDING = 1
 const EPS = 1e-9
 
-var debugLockers = []
+mask = 0
 
 var greatestPossible = function(a, b, acceptable) {
   var cur = a
@@ -70,22 +70,29 @@ var toTheRight = function(a, b) {
 }
 
 var pointInsideCircle = function(point, circle) {
-  return distance(point, circleSector) < circleSector.r 
+  return distance(point, circle) < circle.r + EPS
 }
 
 var pointInsideSector = function(point, sector) {
   var radiusVector = minus(point, sector)
-  var toTheLeftFromStart = toTheRight(sector.startRay, radiusVector)
-  var toTheRightFromEnd = toTheRight(radiusVector, sector.endRay)
-  if (toTheRight(sector.startRay, sector.endRay)) {
-    return toTheLeftFromStart && toTheRightFromEnd
+  var toTheNonRightFromStart = !toTheRight(radiusVector, sector.startRay.v)
+  var toTheNonLeftFromEnd = !toTheRight(sector.endRay.v, radiusVector)
+  if (toTheRight(sector.startRay.v, sector.endRay.v)) {
+    console.log("intersection")
+    return toTheNonRightFromStart && toTheNonLeftFromEnd
   } else {
-    return toTheLeftFromStart || toTheRightFromEnd
+    console.log("union")
+    return toTheNonRightFromStart || toTheNonLeftFromEnd
   }
 }
 
 var pointInsideCircleSector = function(point, circleSector) {
-  return distance(point, circleSector) < circleSector.r 
+  console.log("call pointInsideCircleSector")
+  console.log("point:", point)
+  console.log("circleSector:", circleSector)
+  var result = pointInsideSector(point, circleSector) && pointInsideCircle(point, circleSector)
+  console.log("result: ", result)
+  return result
 }
 
 var lineEquation = function(line) {
@@ -171,6 +178,7 @@ var mapConcat = function(array, callback) {
 
 var fitInCircleSector = function(rectangles, circleSector) {
   console.log("call fitInCircleSector")
+  rectangles = [{x1: 0, y1: 0, x2: 3, y2: 2}]
   console.log("rectangles:", rectangles)
   console.log("circleSector:", circleSector)
   var baseLines = [circleSector.startRay, circleSector.endRay]
@@ -225,6 +233,7 @@ var fitInCircleSector = function(rectangles, circleSector) {
   if (acceptablePoint == null) {
     return null;
   }
+  console.log("acceptablePoint: ", acceptablePoint)
   return {
     dx: acceptablePoint.x,
     dy: acceptablePoint.y
@@ -253,6 +262,12 @@ var paddedRectangles = function(rectangles, paddingX, paddingY) {
   })
 }
 
+var zoomRay = function(ray, zoom) {
+  var zoomedRay = scale(ray, zoom)
+  zoomedRay.v = scale(ray.v, zoom)
+  return zoomedRay
+}
+
 var fitRectanglesToEllipseSector = function(rectangles, ellipseSector) {
   ellipseSector.x = 0
   ellipseSector.y = 0
@@ -266,13 +281,17 @@ var fitRectanglesToEllipseSector = function(rectangles, ellipseSector) {
   console.log("endRay:", endRay)
   var excentricity = ellipseSector.rx / ellipseSector.ry
   console.log("excentricity:", excentricity)
-  
+  var zoom = {
+    x: 1/excentricity,
+    y: 1
+  }
+
   var circleSector = {
     x: ellipseSector.x / excentricity,
     y: ellipseSector.y, 
     r: ellipseSector.ry,
-    startRay: startRay,
-    endRay: endRay
+    startRay: zoomRay(startRay, zoom),
+    endRay: zoomRay(endRay, zoom)
   }
   console.log('circleSector', circleSector)
 
@@ -344,6 +363,7 @@ var classicEllipseSector = function(ellipseSector) {
 
 var fitWithBreaks = function(fitTextRequest, breaksMask) {
   console.log("mask:", breaksMask)
+  mask = breaksMask
   var cost = 0
   var rectangles = []
   var x = 0
