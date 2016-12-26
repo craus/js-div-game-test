@@ -102,21 +102,15 @@ var linePointDistance = function(line, point) {
 }
 
 var linesIntersection = function(line1, line2) {
-  console.log("called linesIntersection")
-  console.log("line1:", line1)
-  console.log("line2:", line2)
-  if (!toTheRight(line1.v, line2.v) && !toTheRight(line2.v, line1.v)) {
-    return null;
-  }
   var eqn = lineEquation(line1)
   // kt+b = 0
   var k = line2.v.x * eqn.a + line2.v.y * eqn.b 
   var b = eqn.c + line2.x * eqn.a + line2.y * eqn.b
   if (Math.abs(k) < EPS) {
-    return null
+    return []
   }
   var t = -b/k
-  return plus(line2, scale(line2.v, t))
+  return [plus(line2, scale(line2.v, t))]
 }
 
 var lineAndCircleIntersection = function(line, circle) {
@@ -169,53 +163,52 @@ var circlesIntersection = function(circle1, circle2) {
   ]
 }
 
+var mapConcat = function(array, callback) {
+  return array.map(callback).reduce(function(a,b) { return a.concat(b)})
+}
+
 var fitInCircleSector = function(rectangles, circleSector) {
-  console.log("called fitInCircleSector")
-  console.log("rectangles:", rectangles)
-  console.log("circleSector:", circleSector)
   var baseLines = [circleSector.startRay, circleSector.endRay]
-  console.log("baseLines:", baseLines)
   var baseCircles = [{x: circleSector.x, y: circleSector.y, r: circleSector.r}]
-  console.log("baseCircles:", baseCircles)
-  console.log("rectangles:", rectangles)
-  var rectangleVertices = rectangles.map(function(rectangle) {
+  
+  var rectangleVertices = mapConcat(rectangles, function(rectangle) {
     return [
-      {x: rectangle.x1, y: rectangle.y1}, 
+      {x: rectangle.x1, y: rectangle.y1},
+      {x: rectangle.x1, y: rectangle.y2},
+      {x: rectangle.x2, y: rectangle.y1},
       {x: rectangle.x2, y: rectangle.y2}
     ]
   })
-  console.log("rectangleVertices:", rectangleVertices)
-  var lines = baseLines.map(function(line) {
-    return rectangleVertices.map(function(p) {
-      return {
+  var lines = mapConcat(baseLines, function(line) {
+    return mapConcat(rectangleVertices, function(p) {
+      return [{
         x: line.x - p.x, 
         y: line.y - p.y,
         v: line.v
-      }
+      }]
     })
   })
-  console.log("lines:", lines)
-  var circles = baseCircles.map(function(circle) {
-    return rectangleVertices.map(function(p) {
-      return {
+  var circles = mapConcat(baseCircles, function(circle) {
+    return mapConcat(rectangleVertices, function(p) {
+      return [{
         x: circle.x - p.x,
         y: circle.y - p.y,
         r: circle.r
-      }
+      }]
     })
   })
-  var points = lines.map(function(line1) {
-    return lines.map(function(line2) {
+  var points = mapConcat(lines, function(line1) {
+    return mapConcat(lines, function(line2) {
       return linesIntersection(line1, line2)
     })
   })
-  points = points.concat(lines.map(function(line) {
-    return circles.map(function(circle) {
+  points = points.concat(mapConcat(lines, function(line) {
+    return mapConcat(circles, function(circle) {
       return lineAndCircleIntersection(line, circle)
     })
   }))
-  points = points.concat(circles.map(function(circle1) {
-    return circles.map(function(circle2) {
+  points = points.concat(mapConcat(circles, function(circle1) {
+    return mapConcat(circles, function(circle2) {
       return circlesIntersection(circle1, circle2)
     })
   }))
@@ -224,6 +217,9 @@ var fitInCircleSector = function(rectangles, circleSector) {
       return pointInsideCircleSector({x: p.x+v.x, y: p.y+v.y}, circleSector)
     })
   })
+  if (acceptablePoint == null) {
+    return null;
+  }
   return {
     dx: acceptablePoint.x,
     dy: acceptablePoint.y
@@ -242,10 +238,6 @@ var rayByAngle = function(angle) {
 }
 
 var paddedRectangles = function(rectangles, paddingX, paddingY) {
-  console.log("called paddedRectangles")
-  console.log("rectangles:", rectangles)
-  console.log("paddingX:", paddingX)
-  console.log("paddingY:", paddingY)
   return rectangles.map(function(rectangle) {
     return {
       x1: rectangle.x1 - paddingX,
@@ -257,9 +249,6 @@ var paddedRectangles = function(rectangles, paddingX, paddingY) {
 }
 
 var fitRectanglesToEllipseSector = function(rectangles, ellipseSector) {
-  console.log("called fitRectanglesToEllipseSector")
-  console.log("rectangles:", rectangles)
-  console.log("ellipseSector:", ellipseSector)
   var startRay = rayByAngle(ellipseSector.startAngle)
   var endRay = rayByAngle(ellipseSector.endAngle)
   
@@ -331,9 +320,6 @@ var classicEllipseSector = function(ellipseSector) {
 }
 
 var fitWithBreaks = function(fitTextRequest, breaksMask) {
-  console.log("called fitWithBreaks")
-  console.log("fitTextRequest:", fitTextRequest)
-  console.log("breaksMask:", breaksMask)
   var cost = 0
   var rectangles = []
   var x = 0
@@ -356,7 +342,6 @@ var fitWithBreaks = function(fitTextRequest, breaksMask) {
       }
     }
   }
-  console.log("rectangles:", rectangles)
   var result = fitRectanglesToEllipseSectorWithMaxPadding(
     rectangles,
     classicEllipseSector(fitTextRequest.ellipseSector)
