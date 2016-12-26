@@ -10,6 +10,8 @@ const PADDING_WEIGHT = 1
 const X_TO_Y_PADDING = 1
 const EPS = 1e-9
 
+var debugLockers = []
+
 var greatestPossible = function(a, b, acceptable) {
   var cur = a
   var step = (b-a)/2
@@ -168,6 +170,9 @@ var mapConcat = function(array, callback) {
 }
 
 var fitInCircleSector = function(rectangles, circleSector) {
+  console.log("call fitInCircleSector")
+  console.log("rectangles:", rectangles)
+  console.log("circleSector:", circleSector)
   var baseLines = [circleSector.startRay, circleSector.endRay]
   var baseCircles = [{x: circleSector.x, y: circleSector.y, r: circleSector.r}]
   
@@ -249,11 +254,28 @@ var paddedRectangles = function(rectangles, paddingX, paddingY) {
 }
 
 var fitRectanglesToEllipseSector = function(rectangles, ellipseSector) {
+  ellipseSector.x = 0
+  ellipseSector.y = 0
+  rectangles = [{x1: -0.5, y1: -1.5, x2: 20.5, y2: 0.5}]
+  console.log("call fitRectanglesToEllipseSector")
+  console.log("rectangles", rectangles)
+  console.log("ellipseSector", ellipseSector)
   var startRay = rayByAngle(ellipseSector.startAngle)
   var endRay = rayByAngle(ellipseSector.endAngle)
-  
+  console.log("startRay:", startRay)
+  console.log("endRay:", endRay)
   var excentricity = ellipseSector.rx / ellipseSector.ry
+  console.log("excentricity:", excentricity)
   
+  var circleSector = {
+    x: ellipseSector.x / excentricity,
+    y: ellipseSector.y, 
+    r: ellipseSector.ry,
+    startRay: startRay,
+    endRay: endRay
+  }
+  console.log('circleSector', circleSector)
+
   var circleSectorFitting = fitInCircleSector(
     rectangles.map(function(rectangle) {
       return {
@@ -263,15 +285,10 @@ var fitRectanglesToEllipseSector = function(rectangles, ellipseSector) {
         y2: rectangle.y2
       }
     }),
-    {
-      x: ellipseSector.x / excentricity,
-      y: ellipseSector.y, 
-      r: ellipseSector.ry,
-      startRay: startRay,
-      endRay: endRay
-    }
+    circleSector
   )
   if (circleSectorFitting == null) {
+    console.log("fitRectanglesToEllipseSector returning null")
     return null
   }
   return {
@@ -281,12 +298,18 @@ var fitRectanglesToEllipseSector = function(rectangles, ellipseSector) {
 }
 
 var fitRectanglesToEllipseSectorWithMaxPadding = function(rectangles, ellipseSector) {
-  var maxPadding = greatestPossible(0, 1e9, function(paddingY) {
-    return fitRectanglesToEllipseSector(
-      paddedRectangles(rectangles, paddingY * X_TO_Y_PADDING, paddingY),
-      ellipseSector
-    ) != null
-  })
+  console.log("call fitRectanglesToEllipseSectorWithMaxPadding")
+  console.log("rectangles:", JSON.stringify(rectangles))
+  console.log("ellipseSector:", ellipseSector)
+
+  // var maxPadding = greatestPossible(0, 1e9, function(paddingY) {
+  //   return fitRectanglesToEllipseSector(
+  //     paddedRectangles(rectangles, paddingY * X_TO_Y_PADDING, paddingY),
+  //     ellipseSector
+  //   ) != null
+  // })
+  var maxPadding = 0.5
+  console.log("maxPadding:", maxPadding)
   var fitting = fitRectanglesToEllipseSector(
     paddedRectangles(rectangles, maxPadding * X_TO_Y_PADDING, maxPadding),
     ellipseSector
@@ -320,6 +343,7 @@ var classicEllipseSector = function(ellipseSector) {
 }
 
 var fitWithBreaks = function(fitTextRequest, breaksMask) {
+  console.log("mask:", breaksMask)
   var cost = 0
   var rectangles = []
   var x = 0
@@ -334,7 +358,7 @@ var fitWithBreaks = function(fitTextRequest, breaksMask) {
     })
     if (j < fitTextRequest.words.length - 1) {
       if (((breaksMask >> j) & 1) == 1) {
-        y += fitTextRequest.lineHeight
+        y -= fitTextRequest.lineHeight
         x = 0
         cost += fitTextRequest.words[j].breakCost
       } else {
