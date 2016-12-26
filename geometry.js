@@ -261,7 +261,6 @@
   var fitRectanglesToEllipseSector = function(rectangles, ellipseSector) {
     ellipseSector.x = 0
     ellipseSector.y = 0
-    rectangles = [{x1: -0.5, y1: -1.5, x2: 20.5, y2: 0.5}]
     var startRay = rayByAngle(ellipseSector.startAngle)
     var endRay = rayByAngle(ellipseSector.endAngle)
     var excentricity = ellipseSector.rx / ellipseSector.ry
@@ -290,7 +289,6 @@
       circleSector
     )
     if (circleSectorFitting == null) {
-      console.log("fitRectanglesToEllipseSector returning null")
       return null
     }
     return scale(circleSectorFitting, {x: excentricity, y: 1})
@@ -298,13 +296,12 @@
 
   var fitRectanglesToEllipseSectorWithMaxPadding = function(rectangles, ellipseSector) {
 
-    // var maxPadding = greatestPossible(0, 1e9, function(paddingY) {
-    //   return fitRectanglesToEllipseSector(
-    //     paddedRectangles(rectangles, paddingY * X_TO_Y_PADDING, paddingY),
-    //     ellipseSector
-    //   ) != null
-    // })
-    var maxPadding = 0.5
+    var maxPadding = greatestPossible(0, 1e9, function(paddingY) {
+      return fitRectanglesToEllipseSector(
+        paddedRectangles(rectangles, paddingY * X_TO_Y_PADDING, paddingY),
+        ellipseSector
+      ) != null
+    })
     var fitting = fitRectanglesToEllipseSector(
       paddedRectangles(rectangles, maxPadding * X_TO_Y_PADDING, maxPadding),
       ellipseSector
