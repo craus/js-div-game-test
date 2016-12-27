@@ -3,6 +3,7 @@
   const PADDING_WEIGHT = 1
   const X_TO_Y_PADDING = 1
   const EPS = 1e-9
+  const DISABLE_BINARY_SEARCH = false
 
   mask = 0
 
@@ -289,12 +290,17 @@
 
   var fitRectanglesToEllipseSectorWithMaxPadding = function(rectangles, ellipseSector) {
 
-    var maxPadding = greatestPossible(0, 1e9, function(paddingY) {
-      return fitRectanglesToEllipseSector(
-        paddedRectangles(rectangles, paddingY * X_TO_Y_PADDING, paddingY),
-        ellipseSector
-      ) != null
-    })
+    if (DISABLE_BINARY_SEARCH) {
+      var maxPadding = 0
+    } else {
+      var maxPadding = greatestPossible(0, 1e9, function(paddingY) {
+        return fitRectanglesToEllipseSector(
+          paddedRectangles(rectangles, paddingY * X_TO_Y_PADDING, paddingY),
+          ellipseSector
+        ) != null
+      })
+    }
+
     var fitting = fitRectanglesToEllipseSector(
       paddedRectangles(rectangles, maxPadding * X_TO_Y_PADDING, maxPadding),
       ellipseSector
@@ -354,9 +360,11 @@
       rectangles,
       classicEllipseSector(fitTextRequest.ellipseSector)
     )
-    if (result == null) {
+    if (result == null || result.padding < fitTextRequest.minFieldWidth) {
       return null
     }
+    result.breaksCost = cost * BREAKS_WEIGHT
+    result.paddingCost = - result.padding * PADDING_WEIGHT
     result.cost = cost * BREAKS_WEIGHT - result.padding * PADDING_WEIGHT
     result.offsets = rectangles.map(function(rectangle) {
       return plus({
@@ -378,9 +386,10 @@
       }
     }
     if (best != null) {
-      return best.offsets.map(function(p) {
+      best.offsets = best.offsets.map(function(p) {
         return scale(p, {x:1, y:-1})
       })  
+      return best
     }
     return null
   }
@@ -393,35 +402,56 @@ var projectAngle = function(angle) {
   // But this is just a coincidence
 }
 
-console.log(fitTextToEllipseSector({
-  spaceWidth: 2,
-	lineHeight: 0.5,
-  words: [
-    {length: 6, breakCost: 10},
-    {length: 7, breakCost: 10},
-    {length: 3, breakCost: -10},
-    {length: 5}
-  ],
-	align: 'left',
-	ellipseSector: {
-		rx: 35,
-		ry: 5,
-		startAngle: projectAngle(Math.atan2(2, -21)),
-		endAngle: 0
-	}  
-}))
+// console.log(fitTextToEllipseSector({
+//   spaceWidth: 2,
+// 	lineHeight: 0.5,
+//   words: [
+//     {length: 6, breakCost: 10},
+//     {length: 7, breakCost: 10},
+//     {length: 3, breakCost: -10},
+//     {length: 5}
+//   ],
+// 	align: 'left',
+// 	ellipseSector: {
+// 		rx: 35,
+// 		ry: 5,
+// 		startAngle: projectAngle(Math.atan2(2, -21)),
+// 		endAngle: 0
+// 	}  
+// }))
+
+// console.log(fitTextToEllipseSector({
+//   spaceWidth: 13874,
+//   lineHeight: 33,
+//   words: [
+//     {length: 8}
+//   ],
+//   align: 'left',
+//   ellipseSector: {
+//     rx: 5,
+//     ry: 55,
+//     startAngle: projectAngle(Math.atan2(11, 5)),
+//     endAngle: projectAngle(Math.atan2(11, -5))
+//   }  
+// }))
 
 console.log(fitTextToEllipseSector({
-  spaceWidth: 13874,
-  lineHeight: 33,
-  words: [
-    {length: 8}
-  ],
-  align: 'left',
-  ellipseSector: {
-    rx: 5,
-    ry: 55,
-    startAngle: projectAngle(Math.atan2(5, 11)),
-    endAngle: projectAngle(Math.atan2(-5, 11))
-  }  
+  "value": "Bank",
+  "ellipseSector": {
+    "rx": 248,
+    "ry": 124,
+    "startAngle": 5.844547842338748,
+    "endAngle": 6.283185307179586
+  },
+  "align": "left",
+  "spaceWidth": 3.891998291015625,
+  "lineHeight": 14,
+  "minFieldWidth": 6.5,
+  "words": [
+    {
+      "length": 31.373985290527344,
+      "breakCost": 0,
+      "value": "Bank"
+    }
+  ]
 }))
