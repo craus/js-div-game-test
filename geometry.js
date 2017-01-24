@@ -165,6 +165,33 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
     return array.map(callback).reduce(function(a,b) { return a.concat(b)})
   }
 
+  // copypasted from https://github.com/indy256/convexhull-js/blob/master/convexhull.js
+  var convexHull = function(points) {
+    points.sort(function (a, b) {
+        return a.x != b.x ? a.x - b.x : a.y - b.y;
+    });
+
+    var n = points.length;
+    var hull = [];
+
+    for (var i = 0; i < 2 * n; i++) {
+        var j = i < n ? i : 2 * n - 1 - i;
+        while (hull.length >= 2 && removeMiddle(hull[hull.length - 2], hull[hull.length - 1], points[j]))
+            hull.pop();
+        hull.push(points[j]);
+    }
+
+    hull.pop();
+    return hull;
+  }
+
+  var removeMiddle = function(a, b, c) {
+    var cross = (a.x - b.x) * (c.y - b.y) - (a.y - b.y) * (c.x - b.x);
+    var dot = (a.x - b.x) * (c.x - b.x) + (a.y - b.y) * (c.y - b.y);
+    return cross < 0 || cross == 0 && dot <= 0;
+  }
+  // end https://github.com/indy256/convexhull-js/blob/master/convexhull.js
+
   var fitInCircleSector = function(rectangles, circleSector) {
     var baseLines = [circleSector.startRay, circleSector.endRay]
     var baseCircles = [{x: circleSector.x, y: circleSector.y, r: circleSector.r}]
@@ -177,6 +204,8 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
         {x: rectangle.x2, y: rectangle.y2}
       ]
     })
+    rectangleVertices = convexHull(rectangleVertices)
+
     var lines = mapConcat(baseLines, function(line) {
       return mapConcat(rectangleVertices, function(p) {
         return [{
@@ -212,6 +241,7 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
     }))
     var acceptablePoint = points.find(function(p) {
       return rectangleVertices.every(function(v) {
+        cnt++
         return pointInsideCircleSector({x: p.x+v.x, y: p.y+v.y}, circleSector)
       })
     })
@@ -553,4 +583,5 @@ for (var i = 0; i < 1; i++) {
 }
 
 var t1 = Date.now()
-console.log(t1-t0)
+console.log("Time: " + (t1-t0) + " ms")
+console.log("pointInsideCircleSector calls: " + cnt)
