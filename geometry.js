@@ -53,6 +53,13 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
     return Math.sqrt(Math.abs(sqr(a.x-b.x)+sqr(a.y-b.y)))
   }
 
+  var sqrDistance = function(a, b) {
+    if (b == undefined) {
+      return sqrDistance(a, {x: 0, y: 0})
+    }
+    return sqr(a.x-b.x)+sqr(a.y-b.y)
+  }
+
   var normalize = function(v) {
     var dist = distance(v, {x: 0, y: 0})
     if (dist < EPS) {
@@ -69,7 +76,7 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
   }
 
   var pointInsideCircle = function(point, circle) {
-    return distance(point, circle) < circle.r + EPS
+    return sqrDistance(point, circle) < sqr(circle.r) + EPS
   }
 
   var pointInsideSector = function(point, sector) {
