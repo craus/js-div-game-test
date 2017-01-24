@@ -389,6 +389,7 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
         cost += fitTextRequest.words[j].breakCost
       } else {
         x = newX + fitTextRequest.spaceWidth
+        cost -= fitTextRequest.words[j].breakCost
       }
     }
     var maxPossiblePadding = Math.max(fitTextRequest.ellipseSector.rx, fitTextRequest.ellipseSector.ry)
@@ -424,15 +425,18 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
     for (var i = maxMask; i >= 0; i--) {
       var cand = fitWithBreaks(fitTextRequest, i, best)
       if (cand != null) {
-        if (best == null || cand.cost < best.cost || cand.cost < best.cost+EPS*Math.abs(best.cost) && cand.paddingCost < best.paddingCost) {
+        if (best == null || cand.cost < best.cost || cand.cost == best.cost && cand.paddingCost < best.paddingCost) {
           if (best == null) {
-            best = {cost: Number.positiveInfinity}
+            best = {cost: Number.POSITIVE_INFINITY}
           }
           best = cand
         }
       }
     }
     if (best != null) {
+      if (best.cost == Number.POSITIVE_INFINITY) {
+        return null
+      }
       best.offsets = best.offsets.map(function(p) {
         return scale(p, {x:1, y:-1})
       })
@@ -562,7 +566,7 @@ for (var i = 0; i < 1; i++) {
       },
       {
         "length": 70,
-        "breakCost": -10000000000,
+        "breakCost": -Number.POSITIVE_INFINITY,
         "value": "providers",
         "attrs": {
           "x": 287.7813112909497,
