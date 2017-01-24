@@ -1,5 +1,5 @@
 window.onload = function() {
-  
+  return
   space = createSpace({
     ticksPerFrame: 300, 
     speed: 0.1,

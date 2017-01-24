@@ -1,11 +1,11 @@
-(function() {
+var cnt = 0
+
+const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCoords, isAngleBetween } = (function() {
   const BREAKS_WEIGHT = 1e9
   const PADDING_WEIGHT = 1
   const X_TO_Y_PADDING = 1
   const EPS = 1e-9
   const DISABLE_BINARY_SEARCH = false
-
-  mask = 0
 
   var greatestPossible = function(a, b, acceptable) {
     var cur = a
@@ -102,7 +102,7 @@
   var linesIntersection = function(line1, line2) {
     var eqn = lineEquation(line1)
     // kt+b = 0
-    var k = line2.v.x * eqn.a + line2.v.y * eqn.b 
+    var k = line2.v.x * eqn.a + line2.v.y * eqn.b
     var b = eqn.c + line2.x * eqn.a + line2.y * eqn.b
     if (Math.abs(k) < EPS) {
       return []
@@ -168,7 +168,7 @@
   var fitInCircleSector = function(rectangles, circleSector) {
     var baseLines = [circleSector.startRay, circleSector.endRay]
     var baseCircles = [{x: circleSector.x, y: circleSector.y, r: circleSector.r}]
-    
+
     var rectangleVertices = mapConcat(rectangles, function(rectangle) {
       return [
         {x: rectangle.x1, y: rectangle.y1},
@@ -180,7 +180,7 @@
     var lines = mapConcat(baseLines, function(line) {
       return mapConcat(rectangleVertices, function(p) {
         return [{
-          x: line.x - p.x, 
+          x: line.x - p.x,
           y: line.y - p.y,
           v: line.v
         }]
@@ -265,22 +265,22 @@
 
     var circleSector = {
       x: ellipseSector.x / excentricity,
-      y: ellipseSector.y, 
+      y: ellipseSector.y,
       r: ellipseSector.ry,
       startRay: zoomRay(startRay, zoom),
       endRay: zoomRay(endRay, zoom)
     }
 
     var circleSectorFitting = fitInCircleSector(
-      rectangles.map(function(rectangle) {
-        return {
-          x1: rectangle.x1 / excentricity,
-          y1: rectangle.y1, 
-          x2: rectangle.x2 / excentricity,
-          y2: rectangle.y2
-        }
-      }),
-      circleSector
+        rectangles.map(function(rectangle) {
+          return {
+            x1: rectangle.x1 / excentricity,
+            y1: rectangle.y1,
+            x2: rectangle.x2 / excentricity,
+            y2: rectangle.y2
+          }
+        }),
+        circleSector
     )
     if (circleSectorFitting == null) {
       return null
@@ -295,15 +295,15 @@
     } else {
       var maxPadding = greatestPossible(0, 1e9, function(paddingY) {
         return fitRectanglesToEllipseSector(
-          paddedRectangles(rectangles, paddingY * X_TO_Y_PADDING, paddingY),
-          ellipseSector
-        ) != null
+                paddedRectangles(rectangles, paddingY * X_TO_Y_PADDING, paddingY),
+                ellipseSector
+            ) != null
       })
     }
 
     var fitting = fitRectanglesToEllipseSector(
-      paddedRectangles(rectangles, maxPadding * X_TO_Y_PADDING, maxPadding),
-      ellipseSector
+        paddedRectangles(rectangles, maxPadding * X_TO_Y_PADDING, maxPadding),
+        ellipseSector
     )
     if (fitting == null) {
       return null
@@ -319,7 +319,7 @@
   }
 
   var projectAngle = function(angle) {
-    return Math.PI/2 - angle 
+    return Math.PI/2 - angle
     // YES, it is the same formula as for classicAngle! :D
     // But this is just a coincidence
   }
@@ -327,15 +327,16 @@
   var classicEllipseSector = function(ellipseSector) {
     return {
       rx: ellipseSector.rx,
-  		ry: ellipseSector.ry,
-  		startAngle: classicAngle(ellipseSector.endAngle),
-  		endAngle: classicAngle(ellipseSector.startAngle)
+      ry: ellipseSector.ry,
+      startAngle: classicAngle(ellipseSector.endAngle),
+      endAngle: classicAngle(ellipseSector.startAngle)
     }
   }
 
-  var fitWithBreaks = function(fitTextRequest, breaksMask) {
+  var fitWithBreaks = function(fitTextRequest, breaksMask, best) {
     var cost = 0
     var rectangles = []
+    var rowRectangles = []
     var x = 0
     var y = 0
     for (var j = 0; j < fitTextRequest.words.length; j++) {
@@ -346,26 +347,38 @@
         x2: newX,
         y2: y
       })
-      if (j < fitTextRequest.words.length - 1) {
-        if (((breaksMask >> j) & 1) == 1) {
-          y -= fitTextRequest.lineHeight
-          x = 0
-          cost += fitTextRequest.words[j].breakCost
-        } else {
-          x = newX + fitTextRequest.spaceWidth
-        }
+      if (j == fitTextRequest.words.length - 1 || ((breaksMask >> j) & 1) == 1) {
+        rowRectangles.push({
+          x1: 0,
+          y1: y - fitTextRequest.lineHeight,
+          x2: newX,
+          y2: y
+        })
+        y -= fitTextRequest.lineHeight
+        x = 0
+        cost += fitTextRequest.words[j].breakCost
+      } else {
+        x = newX + fitTextRequest.spaceWidth
       }
     }
+    var maxPossiblePadding = Math.max(fitTextRequest.ellipseSector.rx, fitTextRequest.ellipseSector.ry)
+    var breaksCost = cost * BREAKS_WEIGHT
+    var bestPossibleCost = breaksCost - PADDING_WEIGHT * maxPossiblePadding
+    if (best != null && best.cost < bestPossibleCost) {
+      return null;
+    }
     var result = fitRectanglesToEllipseSectorWithMaxPadding(
-      rectangles,
-      classicEllipseSector(fitTextRequest.ellipseSector)
+        rowRectangles,
+        classicEllipseSector(fitTextRequest.ellipseSector)
     )
     if (result == null || result.padding < fitTextRequest.minFieldWidth) {
       return null
     }
-    result.breaksCost = cost * BREAKS_WEIGHT
+    result.request = fitTextRequest
+    result.breaksMask = breaksMask
+    result.breaksCost = breaksCost
     result.paddingCost = - result.padding * PADDING_WEIGHT
-    result.cost = cost * BREAKS_WEIGHT - result.padding * PADDING_WEIGHT
+    result.cost = result.breaksCost + result.paddingCost
     result.offsets = rectangles.map(function(rectangle) {
       return plus({
         x: rectangle.x1,
@@ -375,12 +388,16 @@
     return result
   }
 
-  fitTextToEllipseSector = function(fitTextRequest) {
+  const fitTextToEllipseSector = function(fitTextRequest) {
     var best = null
-    for (var i = 0; i < (1 << (fitTextRequest.words.length - 1)); i++) {
-      var cand = fitWithBreaks(fitTextRequest, i)
+    var maxMask = (1 << (fitTextRequest.words.length - 1)) - 1
+    for (var i = maxMask; i >= 0; i--) {
+      var cand = fitWithBreaks(fitTextRequest, i, best)
       if (cand != null) {
-        if (best == null || cand.cost < best.cost) {
+        if (best == null || cand.cost < best.cost || cand.cost < best.cost+EPS*Math.abs(best.cost) && cand.paddingCost < best.paddingCost) {
+          if (best == null) {
+            best = {cost: Number.positiveInfinity}
+          }
           best = cand
         }
       }
@@ -388,19 +405,50 @@
     if (best != null) {
       best.offsets = best.offsets.map(function(p) {
         return scale(p, {x:1, y:-1})
-      })  
+      })
       return best
     }
     return null
-  }
-})()
+  };
 
+  const degreeToRad = (angle) => angle * Math.PI / 180;
+  const radToDeg = (rad) => {
+    const angle = rad * 180 / Math.PI;
+    return angle < 0 ? 360 - Math.abs(angle) : angle;
+  };
 
-var projectAngle = function(angle) {
-  return Math.PI/2 - angle 
-  // YES, it is the same formula as for classicAngle! :D
-  // But this is just a coincidence
-}
+  const toEllipseCoords = (alpha, ratio) => {
+    let beta = Math.PI / 2 - alpha;
+    let x = Math.cos(beta);
+    let y = Math.sin(beta);
+    let dx = ratio * x;
+    let g = Math.atan2(y, dx);
+    return Math.PI / 2 - g;
+  };
+
+  const isAngleBetween = ({ startAngle, endAngle }, { from = 0, to = 2 * Math.PI }) => {
+    const actualFrom = radToDeg(from);
+    const actualTo = radToDeg(to);
+    const actualStart = radToDeg(startAngle);
+    const actualEnd = radToDeg(endAngle);
+    const isInRange = (from, to, angle) => {
+      const actualFrom = from % 360;
+      const actualTo = to % 360;
+
+      if (actualFrom > actualTo) {
+        return ((angle >= actualFrom) || ( angle <= actualTo));
+      } else if (actualTo > actualFrom) {
+        return ((angle <= actualTo) && ( angle >= actualFrom));
+      } else{ // to == from
+        return (angle == actualTo);
+      }
+    };
+
+    return isInRange(actualFrom, actualTo, actualStart) && isInRange(actualFrom, actualTo, actualEnd);
+  };
+
+  return { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCoords, isAngleBetween };
+})();
 
 // console.log(fitTextToEllipseSector({
 //   spaceWidth: 2,
@@ -435,23 +483,74 @@ var projectAngle = function(angle) {
 //   }  
 // }))
 
-console.log(fitTextToEllipseSector({
-  "value": "Bank",
-  "ellipseSector": {
-    "rx": 248,
-    "ry": 124,
-    "startAngle": 5.844547842338748,
-    "endAngle": 6.283185307179586
-  },
-  "align": "left",
-  "spaceWidth": 3.891998291015625,
-  "lineHeight": 14,
-  "minFieldWidth": 6.5,
-  "words": [
-    {
-      "length": 31.373985290527344,
-      "breakCost": 0,
-      "value": "Bank"
-    }
-  ]
-}))
+console.log("Start calculations")
+var t0 = Date.now()
+
+for (var i = 0; i < 1; i++) {
+  console.log(fitTextToEllipseSector({
+    "ellipseSector": {
+      "rx": 212,
+      "ry": 106,
+      "startAngle": 1.6658887606644996,
+      "endAngle": -1.3305786076815007
+    },
+    "minFieldWidth": 1.25,
+    "align": "left",
+    "value": "Digital payment platform providers 17%",
+    "attrs": {
+      "class": "slice-title"
+    },
+    "spaceWidth": 4,
+    "lineHeight": 17,
+    "words": [
+      {
+        "length": 47,
+        "breakCost": 0,
+        "value": "Digital",
+        "attrs": {
+          "x": 101.78131129094973,
+          "y": 154.087556683385
+        }
+      },
+      {
+        "length": 64,
+        "breakCost": 0,
+        "value": "payment",
+        "attrs": {
+          "x": 152.78131129094973,
+          "y": 154.087556683385
+        }
+      },
+      {
+        "length": 63,
+        "breakCost": 0,
+        "value": "platform",
+        "attrs": {
+          "x": 220.78131129094973,
+          "y": 154.087556683385
+        }
+      },
+      {
+        "length": 70,
+        "breakCost": -10000000000,
+        "value": "providers",
+        "attrs": {
+          "x": 287.7813112909497,
+          "y": 154.087556683385
+        }
+      },
+      {
+        "length": 29,
+        "breakCost": 0,
+        "value": "17%",
+        "attrs": {
+          "x": 101.78131129094973,
+          "y": 171.087556683385
+        }
+      }
+    ]
+  }))
+}
+
+var t1 = Date.now()
+console.log(t1-t0)
