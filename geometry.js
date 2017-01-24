@@ -27,6 +27,10 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
     return {x: a.x+b.x, y: a.y+b.y}
   }
 
+  var round = function(a) {
+    return {x: Math.round(a.x), y: Math.round(a.y)}
+  }
+
   var scale = function(a, b) {
     if (b.x == undefined) {
       return scale(a, {x: b, y: b})
@@ -411,10 +415,10 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
     result.paddingCost = - result.padding * PADDING_WEIGHT
     result.cost = result.breaksCost + result.paddingCost
     result.offsets = rectangles.map(function(rectangle) {
-      return plus({
+      return round(plus({
         x: rectangle.x1,
         y: rectangle.y2
-      }, result.fitting)
+      }, result.fitting))
     })
     return result
   }
