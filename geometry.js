@@ -1,5 +1,3 @@
-var cnt = 0
-
 const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCoords, isAngleBetween } = (function() {
   const BREAKS_WEIGHT = 1e9
   const PADDING_WEIGHT = 1
@@ -226,6 +224,7 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
         }]
       })
     })
+
     var circles = mapConcat(baseCircles, function(circle) {
       return mapConcat(rectangleVertices, function(p) {
         return [{
@@ -235,6 +234,7 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
         }]
       })
     })
+
     var points = mapConcat(lines, function(line1) {
       return mapConcat(lines, function(line2) {
         return linesIntersection(line1, line2)
@@ -252,7 +252,6 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
     }))
     var acceptablePoint = points.find(function(p) {
       return rectangleVertices.every(function(v) {
-        cnt++
         return pointInsideCircleSector({x: p.x+v.x, y: p.y+v.y}, circleSector)
       })
     })
@@ -276,6 +275,10 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
     }
   }
 
+  var angleByRay = function(ray) {
+    return Math.atan2(ray.v.y, ray.v.x)
+  }
+
   var paddedRectangles = function(rectangles, paddingX, paddingY) {
     return rectangles.map(function(rectangle) {
       return {
@@ -291,6 +294,41 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
     var zoomedRay = scale(ray, zoom)
     zoomedRay.v = scale(ray.v, zoom)
     return zoomedRay
+  }
+
+  var normalizeAngle = function(angle) {
+    while (angle < 0) {
+      angle += 2*Math.PI
+    }
+    while (angle > 2*Math.PI) {
+      angle -= 2*Math.PI
+    }
+    return angle
+  }
+
+  var ellipseSectorSquare = function(ellipseSector) {
+    var startRay = rayByAngle(ellipseSector.startAngle)
+    var endRay = rayByAngle(ellipseSector.endAngle)
+    var excentricity = ellipseSector.rx / ellipseSector.ry
+    var zoom = {
+      x: 1/excentricity,
+      y: 1
+    }
+
+    var circleSector = {
+      x: ellipseSector.x / excentricity,
+      y: ellipseSector.y,
+      r: ellipseSector.ry,
+      startRay: zoomRay(startRay, zoom),
+      endRay: zoomRay(endRay, zoom)
+    }
+
+    var startAngle = angleByRay(circleSector.startRay)
+    var endAngle = angleByRay(circleSector.endRay)
+    var deltaAngle = normalizeAngle(endAngle - startAngle)
+
+    var circleSectorSquare = sqr(circleSector.r) * deltaAngle / 2
+    return excentricity * circleSectorSquare
   }
 
   var fitRectanglesToEllipseSector = function(rectangles, ellipseSector) {
@@ -397,10 +435,14 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
         })
         y -= fitTextRequest.lineHeight
         x = 0
-        cost += fitTextRequest.words[j].breakCost
+        if (j < fitTextRequest.words.length - 1) {
+          cost += fitTextRequest.words[j].breakCost
+        }
       } else {
-        x = newX + fitTextRequest.spaceWidth
-        cost -= fitTextRequest.words[j].breakCost
+        x = newX + fitTextRequest.spaceWidth       
+        if (j < fitTextRequest.words.length - 1) {
+          cost -= fitTextRequest.words[j].breakCost
+        }
       }
     }
     var maxPossiblePadding = Math.max(fitTextRequest.ellipseSector.rx, fitTextRequest.ellipseSector.ry)
@@ -431,6 +473,14 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
   }
 
   const fitTextToEllipseSector = function(fitTextRequest) {
+    var totalSquare = 0
+    for (var j = 0; j < fitTextRequest.words.length; j++) {
+      totalSquare += fitTextRequest.words[j].length * fitTextRequest.lineHeight
+    }
+    var sectorSquare = ellipseSectorSquare(classicEllipseSector(fitTextRequest.ellipseSector))
+    if (sectorSquare < totalSquare) {
+      return null;
+    }
     var best = null
     var maxMask = (1 << (fitTextRequest.words.length - 1)) - 1
     for (var i = maxMask; i >= 0; i--) {
@@ -495,23 +545,27 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
   return { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCoords, isAngleBetween };
 })();
 
-// console.log(fitTextToEllipseSector({
-//   spaceWidth: 2,
-// 	lineHeight: 0.5,
-//   words: [
-//     {length: 6, breakCost: 10},
-//     {length: 7, breakCost: 10},
-//     {length: 3, breakCost: -10},
-//     {length: 5}
-//   ],
-// 	align: 'left',
-// 	ellipseSector: {
-// 		rx: 35,
-// 		ry: 5,
-// 		startAngle: projectAngle(Math.atan2(2, -21)),
-// 		endAngle: 0
-// 	}  
-// }))
+
+console.log("Start calculations")
+var t0 = Date.now()
+
+console.log(fitTextToEllipseSector({
+  spaceWidth: 2,
+	lineHeight: 0.5,
+  words: [
+    {length: 6, breakCost: 10},
+    {length: 7, breakCost: 10},
+    {length: 3, breakCost: -10},
+    {length: 5}
+  ],
+	align: 'left',
+	ellipseSector: {
+		rx: 35,
+		ry: 5,
+		startAngle: projectAngle(Math.atan2(2, -21)),
+		endAngle: 0
+	}  
+}))
 
 // console.log(fitTextToEllipseSector({
 //   spaceWidth: 13874,
@@ -528,75 +582,74 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
 //   }  
 // }))
 
-console.log("Start calculations")
-var t0 = Date.now()
 
-for (var i = 0; i < 1; i++) {
-  console.log(fitTextToEllipseSector({
-    "ellipseSector": {
-      "rx": 212,
-      "ry": 106,
-      "startAngle": 1.6658887606644996,
-      "endAngle": -1.3305786076815007
-    },
-    "minFieldWidth": 1.25,
-    "align": "left",
-    "value": "Digital payment platform providers 17%",
-    "attrs": {
-      "class": "slice-title"
-    },
-    "spaceWidth": 4,
-    "lineHeight": 17,
-    "words": [
-      {
-        "length": 47,
-        "breakCost": 0,
-        "value": "Digital",
-        "attrs": {
-          "x": 101.78131129094973,
-          "y": 154.087556683385
-        }
-      },
-      {
-        "length": 64,
-        "breakCost": 0,
-        "value": "payment",
-        "attrs": {
-          "x": 152.78131129094973,
-          "y": 154.087556683385
-        }
-      },
-      {
-        "length": 63,
-        "breakCost": 0,
-        "value": "platform",
-        "attrs": {
-          "x": 220.78131129094973,
-          "y": 154.087556683385
-        }
-      },
-      {
-        "length": 70,
-        "breakCost": -Number.POSITIVE_INFINITY,
-        "value": "providers",
-        "attrs": {
-          "x": 287.7813112909497,
-          "y": 154.087556683385
-        }
-      },
-      {
-        "length": 29,
-        "breakCost": 0,
-        "value": "17%",
-        "attrs": {
-          "x": 101.78131129094973,
-          "y": 171.087556683385
-        }
-      }
-    ]
-  }))
-}
+// for (var i = 0; i < 1; i++) {
+//   console.log(fitTextToEllipseSector({
+//     "ellipseSector": {
+//       "rx": 212,
+//       "ry": 106,
+//       "startAngle": 1.6658887606644996,
+//       "endAngle": 1.6658887606644996
+//     },
+//     "minFieldWidth": 1.25,
+//     "align": "left",
+//     "value": "Digital payment platform providers 17%",
+//     "attrs": {
+//       "class": "slice-title"
+//     },
+//     "spaceWidth": 4,
+//     "lineHeight": 17,
+//     "words": [
+//       {
+//         "length": 47,
+//         "breakCost": 0,
+//         "value": "Digital",
+//         "attrs": {
+//           "x": 101.78131129094973,
+//           "y": 154.087556683385
+//         }
+//       },
+//       {
+//         "length": 64,
+//         "breakCost": 0,
+//         "value": "payment",
+//         "attrs": {
+//           "x": 152.78131129094973,
+//           "y": 154.087556683385
+//         }
+//       },
+//       {
+//         "length": 63,
+//         "breakCost": 0,
+//         "value": "platform",
+//         "attrs": {
+//           "x": 220.78131129094973,
+//           "y": 154.087556683385
+//         }
+//       },
+//       {
+//         "length": 70,
+//         "breakCost": -Number.POSITIVE_INFINITY,
+//         "value": "providers",
+//         "attrs": {
+//           "x": 287.7813112909497,
+//           "y": 154.087556683385
+//         }
+//       },
+//       {
+//         "length": 29,
+//         "breakCost": 0,
+//         "value": "17%",
+//         "attrs": {
+//           "x": 101.78131129094973,
+//           "y": 171.087556683385
+//         }
+//       }
+//     ]
+//   }))
+// }
 
 var t1 = Date.now()
 console.log("Time: " + (t1-t0) + " ms")
+console.log("AP Time: " + apTotal + " ms")
 console.log("pointInsideCircleSector calls: " + cnt)
