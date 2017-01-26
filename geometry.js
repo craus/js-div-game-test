@@ -474,12 +474,17 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
 
   const fitTextToEllipseSector = function(fitTextRequest) {
     var totalSquare = 0
+    var maxWordLength = 0
     for (var j = 0; j < fitTextRequest.words.length; j++) {
       totalSquare += fitTextRequest.words[j].length * fitTextRequest.lineHeight
+      maxWordLength = Math.max(maxWordLength, fitTextRequest.words[j].length)
     }
     var sectorSquare = ellipseSectorSquare(classicEllipseSector(fitTextRequest.ellipseSector))
     if (sectorSquare < totalSquare) {
       return null;
+    }
+    if (fitWithBreaks(Object.assign({}, fitTextRequest, {words: [{length: maxWordLength}]})) == null) {
+      return null
     }
     var best = null
     var maxMask = (1 << (fitTextRequest.words.length - 1)) - 1
@@ -549,23 +554,41 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
 console.log("Start calculations")
 var t0 = Date.now()
 
-console.log(fitTextToEllipseSector({
-  spaceWidth: 2,
-	lineHeight: 0.5,
-  words: [
-    {length: 6, breakCost: 10},
-    {length: 7, breakCost: 10},
-    {length: 3, breakCost: -10},
-    {length: 5}
-  ],
-	align: 'left',
-	ellipseSector: {
-		rx: 35,
-		ry: 5,
-		startAngle: projectAngle(Math.atan2(2, -21)),
-		endAngle: 0
-	}  
-}))
+// console.log(fitTextToEllipseSector({
+//   spaceWidth: 2,
+//   lineHeight: 0.5,
+//   words: [
+//     {length: 6, breakCost: 10},
+//     {length: 7, breakCost: 10},
+//     {length: 3, breakCost: -10},
+//     {length: 40}
+//   ],
+//   align: 'left',
+//   ellipseSector: {
+//     rx: 35,
+//     ry: 5,
+//     startAngle: projectAngle(Math.atan2(2, -21)),
+//     endAngle: 0
+//   }  
+// }))
+
+// console.log(fitTextToEllipseSector({
+//   spaceWidth: 2,
+// 	lineHeight: 0.5,
+//   words: [
+//     {length: 6, breakCost: 10},
+//     {length: 7, breakCost: 10},
+//     {length: 3, breakCost: -10},
+//     {length: 5}
+//   ],
+// 	align: 'left',
+// 	ellipseSector: {
+// 		rx: 35,
+// 		ry: 5,
+// 		startAngle: projectAngle(Math.atan2(2, -21)),
+// 		endAngle: 0
+// 	}  
+// }))
 
 // console.log(fitTextToEllipseSector({
 //   spaceWidth: 13874,
@@ -583,71 +606,71 @@ console.log(fitTextToEllipseSector({
 // }))
 
 
-// for (var i = 0; i < 1; i++) {
-//   console.log(fitTextToEllipseSector({
-//     "ellipseSector": {
-//       "rx": 212,
-//       "ry": 106,
-//       "startAngle": 1.6658887606644996,
-//       "endAngle": 1.6658887606644996
-//     },
-//     "minFieldWidth": 1.25,
-//     "align": "left",
-//     "value": "Digital payment platform providers 17%",
-//     "attrs": {
-//       "class": "slice-title"
-//     },
-//     "spaceWidth": 4,
-//     "lineHeight": 17,
-//     "words": [
-//       {
-//         "length": 47,
-//         "breakCost": 0,
-//         "value": "Digital",
-//         "attrs": {
-//           "x": 101.78131129094973,
-//           "y": 154.087556683385
-//         }
-//       },
-//       {
-//         "length": 64,
-//         "breakCost": 0,
-//         "value": "payment",
-//         "attrs": {
-//           "x": 152.78131129094973,
-//           "y": 154.087556683385
-//         }
-//       },
-//       {
-//         "length": 63,
-//         "breakCost": 0,
-//         "value": "platform",
-//         "attrs": {
-//           "x": 220.78131129094973,
-//           "y": 154.087556683385
-//         }
-//       },
-//       {
-//         "length": 70,
-//         "breakCost": -Number.POSITIVE_INFINITY,
-//         "value": "providers",
-//         "attrs": {
-//           "x": 287.7813112909497,
-//           "y": 154.087556683385
-//         }
-//       },
-//       {
-//         "length": 29,
-//         "breakCost": 0,
-//         "value": "17%",
-//         "attrs": {
-//           "x": 101.78131129094973,
-//           "y": 171.087556683385
-//         }
-//       }
-//     ]
-//   }))
-// }
+for (var i = 0; i < 1; i++) {
+  console.log(fitTextToEllipseSector({
+    "ellipseSector": {
+      "rx": 212,
+      "ry": 106,
+      "startAngle": 1.6658887606644996,
+      "endAngle": -1.3305786076815007
+    },
+    "minFieldWidth": 1.25,
+    "align": "left",
+    "value": "Digital payment platform providers 17%",
+    "attrs": {
+      "class": "slice-title"
+    },
+    "spaceWidth": 4,
+    "lineHeight": 17,
+    "words": [
+      {
+        "length": 47,
+        "breakCost": 0,
+        "value": "Digital",
+        "attrs": {
+          "x": 101.78131129094973,
+          "y": 154.087556683385
+        }
+      },
+      {
+        "length": 64,
+        "breakCost": 0,
+        "value": "payment",
+        "attrs": {
+          "x": 152.78131129094973,
+          "y": 154.087556683385
+        }
+      },
+      {
+        "length": 63,
+        "breakCost": 0,
+        "value": "platform",
+        "attrs": {
+          "x": 220.78131129094973,
+          "y": 154.087556683385
+        }
+      },
+      {
+        "length": 70,
+        "breakCost": -Number.POSITIVE_INFINITY,
+        "value": "providers",
+        "attrs": {
+          "x": 287.7813112909497,
+          "y": 154.087556683385
+        }
+      },
+      {
+        "length": 29,
+        "breakCost": 0,
+        "value": "17%",
+        "attrs": {
+          "x": 101.78131129094973,
+          "y": 171.087556683385
+        }
+      }
+    ]
+  }))
+}
 
 var t1 = Date.now()
 console.log("Time: " + (t1-t0) + " ms")
