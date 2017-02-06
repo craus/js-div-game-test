@@ -1,3 +1,16 @@
+var profileTime = {}
+var timePart = {}
+var debugInfo = {}
+var profileStart = function(type = 'default') {
+  timePart[type] = Date.now()
+}
+var profileEnd = function(type = 'default') {
+  if (profileTime[type] == undefined) {
+    profileTime[type] = 0
+  }
+  profileTime[type] += Date.now() - timePart[type]
+}
+
 const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCoords, isAngleBetween } = (function() {
   const BREAKS_WEIGHT = 1e9
   const PADDING_WEIGHT = 1
@@ -25,6 +38,10 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
     return {x: a.x+b.x, y: a.y+b.y}
   }
 
+  var mult = function(a, k) {
+    return {x: a.x*k, y: a.y*k}
+  }
+
   var round = function(a) {
     return {x: Math.round(a.x), y: Math.round(a.y)}
   }
@@ -38,6 +55,10 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
 
   var cosp = function(a, b) {
     return a.x * b.y - a.y * b.x
+  }
+
+  var scalp = function(a, b) {
+    return a.x * b.x + a.y * b.y
   }
 
   var sqr = function(x) {
@@ -201,8 +222,33 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
   }
   // end https://github.com/indy256/convexhull-js/blob/master/convexhull.js
 
+  var swipeVector = function(ray) {
+    return {
+      x: -ray.v.y,
+      y: ray.v.x
+    }
+  }
+
+  var minBy = function(array, criteria) {
+    var best = null
+    var bestCriteria = Number.POSITIVE_INFINITY
+    array.forEach(function(element) {
+      var newCriteria = criteria(element)
+      if (newCriteria < bestCriteria) {
+        bestCriteria = newCriteria
+        best = element
+      }
+    })
+    return best
+  }
+
   var fitInCircleSector = function(rectangles, circleSector) {
-    var baseLines = [circleSector.startRay, circleSector.endRay]
+    var baseLines = [circleSector.startRay, {
+      x: circleSector.endRay.x, 
+      y: circleSector.endRay.y, 
+      v: mult(circleSector.endRay.v, -1)
+    }]
+    debugInfo.circleSector = circleSector
     var baseCircles = [{x: circleSector.x, y: circleSector.y, r: circleSector.r}]
 
     var rectangleVertices = mapConcat(rectangles, function(rectangle) {
@@ -215,14 +261,13 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
     })
     rectangleVertices = convexHull(rectangleVertices)
 
-    var lines = mapConcat(baseLines, function(line) {
-      return mapConcat(rectangleVertices, function(p) {
-        return [{
-          x: line.x - p.x,
-          y: line.y - p.y,
-          v: line.v
-        }]
-      })
+    var lines = baseLines.map(function(line) {
+      var closestPoint = minBy(rectangleVertices, function(p) { return scalp(p, swipeVector(line))})
+      return {
+        x: line.x - closestPoint.x,
+        y: line.y - closestPoint.y,
+        v: line.v
+      }
     })
 
     var circles = mapConcat(baseCircles, function(circle) {
@@ -235,21 +280,29 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
       })
     })
 
+
+    profileStart('line-line')
     var points = mapConcat(lines, function(line1) {
       return mapConcat(lines, function(line2) {
         return linesIntersection(line1, line2)
       })
     })
+    profileEnd('line-line')
+    profileStart('line-circle')
     points = points.concat(mapConcat(lines, function(line) {
       return mapConcat(circles, function(circle) {
         return lineAndCircleIntersection(line, circle)
       })
     }))
+    profileEnd('line-circle')
+    profileStart('circle-circle')
     points = points.concat(mapConcat(circles, function(circle1) {
       return mapConcat(circles, function(circle2) {
         return circlesIntersection(circle1, circle2)
       })
     }))
+    profileEnd('circle-circle')
+
     var acceptablePoint = points.find(function(p) {
       return rectangleVertices.every(function(v) {
         return pointInsideCircleSector({x: p.x+v.x, y: p.y+v.y}, circleSector)
@@ -572,23 +625,23 @@ var t0 = Date.now()
 //   }  
 // }))
 
-// console.log(fitTextToEllipseSector({
-//   spaceWidth: 2,
-// 	lineHeight: 0.5,
-//   words: [
-//     {length: 6, breakCost: 10},
-//     {length: 7, breakCost: 10},
-//     {length: 3, breakCost: -10},
-//     {length: 5}
-//   ],
-// 	align: 'left',
-// 	ellipseSector: {
-// 		rx: 35,
-// 		ry: 5,
-// 		startAngle: projectAngle(Math.atan2(2, -21)),
-// 		endAngle: 0
-// 	}  
-// }))
+console.log(fitTextToEllipseSector({
+  spaceWidth: 2,
+	lineHeight: 0.5,
+  words: [
+    {length: 6, breakCost: 10},
+    {length: 7, breakCost: 10},
+    {length: 3, breakCost: -10},
+    {length: 5}
+  ],
+	align: 'left',
+	ellipseSector: {
+		rx: 35,
+		ry: 5,
+		startAngle: projectAngle(Math.atan2(2, -21)),
+		endAngle: 0
+	}  
+}))
 
 // console.log(fitTextToEllipseSector({
 //   spaceWidth: 13874,
@@ -667,12 +720,49 @@ for (var i = 0; i < 1; i++) {
           "x": 101.78131129094973,
           "y": 171.087556683385
         }
-      }
+      },
+      {
+        "length": 29,
+        "breakCost": 0,
+        "value": "17%",
+        "attrs": {
+          "x": 101.78131129094973,
+          "y": 171.087556683385
+        }
+      },
+      {
+        "length": 29,
+        "breakCost": 0,
+        "value": "17%",
+        "attrs": {
+          "x": 101.78131129094973,
+          "y": 171.087556683385
+        }
+      },
+      {
+        "length": 29,
+        "breakCost": 0,
+        "value": "17%",
+        "attrs": {
+          "x": 101.78131129094973,
+          "y": 171.087556683385
+        }
+      },
+      {
+        "length": 29,
+        "breakCost": 0,
+        "value": "17%",
+        "attrs": {
+          "x": 101.78131129094973,
+          "y": 171.087556683385
+        }
+      },
     ]
   }))
 }
 
 var t1 = Date.now()
 console.log("Time: " + (t1-t0) + " ms")
-console.log("AP Time: " + apTotal + " ms")
-console.log("pointInsideCircleSector calls: " + cnt)
+console.log("Profile Time: ", profileTime)
+console.log(debugInfo)
+//console.log("pointInsideCircleSector calls: " + cnt)
