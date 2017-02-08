@@ -302,12 +302,13 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
       })
     }))
     profileEnd('circle-circle')
-
+    profileStart('acceptablePoint')
     var acceptablePoint = points.find(function(p) {
       return rectangleVertices.every(function(v) {
         return pointInsideCircleSector({x: p.x+v.x, y: p.y+v.y}, circleSector)
       })
     })
+    profileEnd('acceptablePoint')
     if (acceptablePoint == null) {
       return null;
     }
@@ -525,7 +526,7 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
     return result
   }
 
-  const fitTextToEllipseSector = function(fitTextRequest) {
+  var fitTextToConvexEllipseSector = function(fitTextRequest) {
     var totalSquare = 0
     var maxWordLength = 0
     for (var j = 0; j < fitTextRequest.words.length; j++) {
@@ -563,6 +564,29 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
     }
     return null
   };
+
+  const fitTextToEllipseSector = function(fitTextRequest) {
+    if (fitTextRequest.ellipseSector.endAngle - fitTextRequest.ellipseSector.startAngle < Math.PI + EPS) {
+      return fitTextToConvexEllipseSector(fitTextRequest)
+    }
+    if (fitTextRequest.ellipseSector.startAngle < Math.PI/2 + EPS) {
+      var cand = fitTextToConvexEllipseSector(Object.assign({}, fitTextRequest, {
+        ellipseSector: Object.assign({}, fitTextRequest.ellipseSector, {
+          startAngle: Math.PI/2,
+          endAngle: 3*Math.PI/2
+        })
+      }))
+      if (cand != null) {
+        return cand
+      }
+    }
+    return fitTextToConvexEllipseSector(Object.assign({}, fitTextRequest, {
+      ellipseSector: Object.assign({}, fitTextRequest.ellipseSector, {
+        startAngle: Math.PI,
+        endAngle: 2*Math.PI
+      })
+    }))
+  }
 
   const degreeToRad = (angle) => angle * Math.PI / 180;
   const radToDeg = (rad) => {
@@ -607,6 +631,7 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
 console.log("Start calculations")
 var t0 = Date.now()
 
+// one big word
 // console.log(fitTextToEllipseSector({
 //   spaceWidth: 2,
 //   lineHeight: 0.5,
@@ -625,23 +650,73 @@ var t0 = Date.now()
 //   }  
 // }))
 
+// fit to left half 
+// console.log(fitTextToEllipseSector({
+//   spaceWidth: 3872,
+//   lineHeight: 8,
+//   words: [
+//     {length: 6}
+//   ],
+//   align: 'left',
+//   ellipseSector: {
+//     rx: 10,
+//     ry: 5,
+//     startAngle: Math.PI / 3,
+//     endAngle: 2 * Math.PI
+//   }  
+// }))
+
+
+//fit to bottom half 
+// console.log(fitTextToEllipseSector({
+//   spaceWidth: 3872,
+//   lineHeight: 4,
+//   words: [
+//     {length: 12}
+//   ],
+//   align: 'left',
+//   ellipseSector: {
+//     rx: 10,
+//     ry: 5,
+//     startAngle: Math.PI / 3,
+//     endAngle: 2 * Math.PI
+//   }  
+// }))
+
+//fit to left half, despite able to fit to bottom half, because bottom half is not present whole 
 console.log(fitTextToEllipseSector({
-  spaceWidth: 2,
-	lineHeight: 0.5,
+  spaceWidth: 3872,
+  lineHeight: 1,
   words: [
-    {length: 6, breakCost: 10},
-    {length: 7, breakCost: 10},
-    {length: 3, breakCost: -10},
-    {length: 5}
+    {length: 4}
   ],
-	align: 'left',
-	ellipseSector: {
-		rx: 35,
-		ry: 5,
-		startAngle: projectAngle(Math.atan2(2, -21)),
-		endAngle: 0
-	}  
+  align: 'left',
+  ellipseSector: {
+    rx: 10,
+    ry: 5,
+    startAngle: Math.PI / 2 + 0.01,
+    endAngle: 2 * Math.PI
+  }  
 }))
+
+//main precision test (padding should be 0.5)
+// console.log(fitTextToEllipseSector({
+//   spaceWidth: 2,
+// 	lineHeight: 0.5,
+//   words: [
+//     {length: 6, breakCost: 10},
+//     {length: 7, breakCost: 10},
+//     {length: 3, breakCost: -10},
+//     {length: 5}
+//   ],
+// 	align: 'left',
+// 	ellipseSector: {
+// 		rx: 35,
+// 		ry: 5,
+// 		startAngle: projectAngle(Math.atan2(2, -21)),
+// 		endAngle: 0
+// 	}  
+// }))
 
 // console.log(fitTextToEllipseSector({
 //   spaceWidth: 13874,
@@ -658,108 +733,108 @@ console.log(fitTextToEllipseSector({
 //   }  
 // }))
 
-
-for (var i = 0; i < 1; i++) {
-  console.log(fitTextToEllipseSector({
-    "ellipseSector": {
-      "rx": 212,
-      "ry": 106,
-      "startAngle": 1.6658887606644996,
-      "endAngle": -1.3305786076815007
-    },
-    "minFieldWidth": 1.25,
-    "align": "left",
-    "value": "Digital payment platform providers 17%",
-    "attrs": {
-      "class": "slice-title"
-    },
-    "spaceWidth": 4,
-    "lineHeight": 17,
-    "words": [
-      {
-        "length": 47,
-        "breakCost": 0,
-        "value": "Digital",
-        "attrs": {
-          "x": 101.78131129094973,
-          "y": 154.087556683385
-        }
-      },
-      {
-        "length": 64,
-        "breakCost": 0,
-        "value": "payment",
-        "attrs": {
-          "x": 152.78131129094973,
-          "y": 154.087556683385
-        }
-      },
-      {
-        "length": 63,
-        "breakCost": 0,
-        "value": "platform",
-        "attrs": {
-          "x": 220.78131129094973,
-          "y": 154.087556683385
-        }
-      },
-      {
-        "length": 70,
-        "breakCost": -Number.POSITIVE_INFINITY,
-        "value": "providers",
-        "attrs": {
-          "x": 287.7813112909497,
-          "y": 154.087556683385
-        }
-      },
-      {
-        "length": 29,
-        "breakCost": 0,
-        "value": "17%",
-        "attrs": {
-          "x": 101.78131129094973,
-          "y": 171.087556683385
-        }
-      },
-      {
-        "length": 29,
-        "breakCost": 0,
-        "value": "17%",
-        "attrs": {
-          "x": 101.78131129094973,
-          "y": 171.087556683385
-        }
-      },
-      {
-        "length": 29,
-        "breakCost": 0,
-        "value": "17%",
-        "attrs": {
-          "x": 101.78131129094973,
-          "y": 171.087556683385
-        }
-      },
-      {
-        "length": 29,
-        "breakCost": 0,
-        "value": "17%",
-        "attrs": {
-          "x": 101.78131129094973,
-          "y": 171.087556683385
-        }
-      },
-      {
-        "length": 29,
-        "breakCost": 0,
-        "value": "17%",
-        "attrs": {
-          "x": 101.78131129094973,
-          "y": 171.087556683385
-        }
-      },
-    ]
-  }))
-}
+// performance test
+// for (var i = 0; i < 1; i++) {
+//   console.log(fitTextToEllipseSector({
+//     "ellipseSector": {
+//       "rx": 212,
+//       "ry": 106,
+//       "startAngle": 1.6658887606644996,
+//       "endAngle": -1.3305786076815007
+//     },
+//     "minFieldWidth": 1.25,
+//     "align": "left",
+//     "value": "Digital payment platform providers 17%",
+//     "attrs": {
+//       "class": "slice-title"
+//     },
+//     "spaceWidth": 4,
+//     "lineHeight": 17,
+//     "words": [
+//       {
+//         "length": 47,
+//         "breakCost": 0,
+//         "value": "Digital",
+//         "attrs": {
+//           "x": 101.78131129094973,
+//           "y": 154.087556683385
+//         }
+//       },
+//       {
+//         "length": 64,
+//         "breakCost": 0,
+//         "value": "payment",
+//         "attrs": {
+//           "x": 152.78131129094973,
+//           "y": 154.087556683385
+//         }
+//       },
+//       {
+//         "length": 63,
+//         "breakCost": 0,
+//         "value": "platform",
+//         "attrs": {
+//           "x": 220.78131129094973,
+//           "y": 154.087556683385
+//         }
+//       },
+//       {
+//         "length": 70,
+//         "breakCost": -Number.POSITIVE_INFINITY,
+//         "value": "providers",
+//         "attrs": {
+//           "x": 287.7813112909497,
+//           "y": 154.087556683385
+//         }
+//       },
+//       {
+//         "length": 29,
+//         "breakCost": 0,
+//         "value": "17%",
+//         "attrs": {
+//           "x": 101.78131129094973,
+//           "y": 171.087556683385
+//         }
+//       },
+//       {
+//         "length": 29,
+//         "breakCost": 0,
+//         "value": "17%",
+//         "attrs": {
+//           "x": 101.78131129094973,
+//           "y": 171.087556683385
+//         }
+//       },
+//       {
+//         "length": 29,
+//         "breakCost": 0,
+//         "value": "17%",
+//         "attrs": {
+//           "x": 101.78131129094973,
+//           "y": 171.087556683385
+//         }
+//       },
+//       {
+//         "length": 29,
+//         "breakCost": 0,
+//         "value": "17%",
+//         "attrs": {
+//           "x": 101.78131129094973,
+//           "y": 171.087556683385
+//         }
+//       },
+//       {
+//         "length": 29,
+//         "breakCost": 0,
+//         "value": "17%",
+//         "attrs": {
+//           "x": 101.78131129094973,
+//           "y": 171.087556683385
+//         }
+//       },
+//     ]
+//   }))
+// }
 
 var t1 = Date.now()
 console.log("Time: " + (t1-t0) + " ms")
