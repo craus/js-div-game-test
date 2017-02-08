@@ -1,15 +1,18 @@
-var profileTime = {}
-var timePart = {}
-var debugInfo = {}
-var profileStart = function(type = 'default') {
-  timePart[type] = Date.now()
+globalDebug = {
+  profileTime: {},
+  timePart: {},
+  info: {},
+  profileStart: function(type = 'default') {
+    this.timePart[type] = Date.now()
+  },
+  profileEnd: function(type = 'default') {
+    if (this.profileTime[type] == undefined) {
+      this.profileTime[type] = 0
+    }
+    this.profileTime[type] += Date.now() - this.timePart[type]
+  } 
 }
-var profileEnd = function(type = 'default') {
-  if (profileTime[type] == undefined) {
-    profileTime[type] = 0
-  }
-  profileTime[type] += Date.now() - timePart[type]
-}
+
 
 const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCoords, isAngleBetween } = (function() {
   const BREAKS_WEIGHT = 1e9
@@ -17,6 +20,30 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
   const X_TO_Y_PADDING = 1
   const EPS = 1e-9
   const DISABLE_BINARY_SEARCH = false
+
+  var debug
+
+  try {
+    debug = globalDebug 
+  }
+  catch(e) {
+    if(e.name == "ReferenceError") {
+      debug = {
+        profileTime: {},
+        timePart: {},
+        info: {},
+        profileStart: function(type = 'default') {
+          this.timePart[type] = Date.now()
+        },
+        profileEnd: function(type = 'default') {
+          if (this.profileTime[type] == undefined) {
+            this.profileTime[type] = 0
+          }
+          this.profileTime[type] += Date.now() - this.timePart[type]
+        } 
+      }
+    }
+  }
 
   var greatestPossible = function(a, b, acceptable) {
     var cur = a
@@ -248,7 +275,7 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
       y: circleSector.endRay.y, 
       v: mult(circleSector.endRay.v, -1)
     }]
-    debugInfo.circleSector = circleSector
+    debug.info.circleSector = circleSector
     var baseCircles = [{x: circleSector.x, y: circleSector.y, r: circleSector.r}]
 
     var rectangleVertices = mapConcat(rectangles, function(rectangle) {
@@ -281,34 +308,34 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
     })
 
 
-    profileStart('line-line')
+    debug.profileStart('line-line')
     var points = mapConcat(lines, function(line1) {
       return mapConcat(lines, function(line2) {
         return linesIntersection(line1, line2)
       })
     })
-    profileEnd('line-line')
-    profileStart('line-circle')
+    debug.profileEnd('line-line')
+    debug.profileStart('line-circle')
     points = points.concat(mapConcat(lines, function(line) {
       return mapConcat(circles, function(circle) {
         return lineAndCircleIntersection(line, circle)
       })
     }))
-    profileEnd('line-circle')
-    profileStart('circle-circle')
+    debug.profileEnd('line-circle')
+    debug.profileStart('circle-circle')
     points = points.concat(mapConcat(circles, function(circle1) {
       return mapConcat(circles, function(circle2) {
         return circlesIntersection(circle1, circle2)
       })
     }))
-    profileEnd('circle-circle')
-    profileStart('acceptablePoint')
+    debug.profileEnd('circle-circle')
+    debug.profileStart('acceptablePoint')
     var acceptablePoint = points.find(function(p) {
       return rectangleVertices.every(function(v) {
         return pointInsideCircleSector({x: p.x+v.x, y: p.y+v.y}, circleSector)
       })
     })
-    profileEnd('acceptablePoint')
+    debug.profileEnd('acceptablePoint')
     if (acceptablePoint == null) {
       return null;
     }
@@ -838,6 +865,6 @@ console.log(fitTextToEllipseSector({
 
 var t1 = Date.now()
 console.log("Time: " + (t1-t0) + " ms")
-console.log("Profile Time: ", profileTime)
-console.log(debugInfo)
+console.log("Profile Time: ", globalDebug.profileTime)
+console.log(globalDebug.info)
 //console.log("pointInsideCircleSector calls: " + cnt)
