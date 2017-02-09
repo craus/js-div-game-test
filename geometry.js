@@ -593,7 +593,7 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
   };
 
   const fitTextToEllipseSector = function(fitTextRequest) {
-    if (fitTextRequest.ellipseSector.endAngle - fitTextRequest.ellipseSector.startAngle < Math.PI + EPS) {
+    if (normalizeAngle(fitTextRequest.ellipseSector.endAngle - fitTextRequest.ellipseSector.startAngle) < Math.PI + EPS) {
       return fitTextToConvexEllipseSector(fitTextRequest)
     }
     if (fitTextRequest.ellipseSector.startAngle < Math.PI/2 + EPS) {
@@ -711,19 +711,94 @@ var t0 = Date.now()
 // }))
 
 //fit to left half, despite able to fit to bottom half, because bottom half is not present whole 
+// console.log(fitTextToEllipseSector({
+//   spaceWidth: 3872,
+//   lineHeight: 1,
+//   words: [
+//     {length: 4}
+//   ],
+//   align: 'left',
+//   ellipseSector: {
+//     rx: 10,
+//     ry: 5,
+//     startAngle: Math.PI / 2 + 0.01,
+//     endAngle: 2 * Math.PI
+//   }  
+// }))
+
+//test
 console.log(fitTextToEllipseSector({
-  spaceWidth: 3872,
-  lineHeight: 1,
-  words: [
-    {length: 4}
-  ],
-  align: 'left',
-  ellipseSector: {
-    rx: 10,
-    ry: 5,
-    startAngle: Math.PI / 2 + 0.01,
-    endAngle: 2 * Math.PI
-  }  
+   "ellipseSector": {
+      "rx": 212,
+      "ry": 106,
+      "startAngle": 0.5762623,
+      "endAngle": -4.440892E-16
+   },
+   "minFieldWidth": 2.5,
+   "align": "left",
+   "value": "Yes, but with some reservations* 95%",
+   "attrs": {
+      "class": "slice-title",
+      "fill": "#FFF"
+   },
+   "spaceWidth": 4,
+   "lineHeight": 17,
+   "words": [
+      {
+         "length": 29,
+         "breakCost": 0,
+         "value": "Yes,",
+         "attrs": {
+            "x": 161.96507,
+            "y": 95.5
+         }
+      },
+      {
+         "length": 25,
+         "breakCost": 0,
+         "value": "but",
+         "attrs": {
+            "x": 194.96507,
+            "y": 95.5
+         }
+      },
+      {
+         "length": 34,
+         "breakCost": 0,
+         "value": "with",
+         "attrs": {
+            "x": 223.96507,
+            "y": 95.5
+         }
+      },
+      {
+         "length": 39,
+         "breakCost": 0,
+         "value": "some",
+         "attrs": {
+            "x": 161.96507,
+            "y": 112.5
+         }
+      },
+      {
+         "length": 98,
+         "breakCost": -10000000000,
+         "value": "reservations*",
+         "attrs": {
+            "x": 204.96507,
+            "y": 112.5
+         }
+      },
+      {
+         "length": 29,
+         "breakCost": 0,
+         "value": "95%",
+         "attrs": {
+            "x": 161.96507,
+            "y": 129.5
+         }
+      }
+   ]
 }))
 
 //main precision test (padding should be 0.5)
