@@ -526,6 +526,17 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
         }
       }
     }
+    var boundRectangles = [
+      rowRectangles.reduce((acc, cur) => {
+        return {
+          x1: Math.min(acc.x1, cur.x1),
+          y1: Math.min(acc.y1, cur.y1),
+          x2: Math.max(acc.x2, cur.x2),
+          y2: Math.max(acc.y2, cur.y2)
+        }
+      })
+    ]
+    var fittingRectangles = fitTextRequest.boundBox ? boundRectangles : rowRectangles
     var maxPossiblePadding = Math.max(fitTextRequest.ellipseSector.rx, fitTextRequest.ellipseSector.ry)
     var breaksCost = cost * BREAKS_WEIGHT
     var bestPossibleCost = breaksCost - PADDING_WEIGHT * maxPossiblePadding
@@ -533,7 +544,7 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
       return null;
     }
     var result = fitRectanglesToEllipseSectorWithMaxPadding(
-        rowRectangles,
+        fittingRectangles,
         classicEllipseSector(fitTextRequest.ellipseSector)
     )
     if (result == null || result.padding < fitTextRequest.minFieldWidth) {
@@ -545,10 +556,10 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
     result.paddingCost = - result.padding * PADDING_WEIGHT
     result.cost = result.breaksCost + result.paddingCost
     result.offsets = rectangles.map(function(rectangle) {
-      return plus({
+      return round(plus({
         x: rectangle.x1,
         y: rectangle.y2
-      }, result.fitting)
+      }, result.fitting))
     })
     return result
   }
@@ -592,26 +603,38 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
     return null
   };
 
+  var fitTextToEllipseSectorPreferBoundBox = function(fitTextRequest) {
+    var cand = fitTextToEllipseSector(Object.assign({}, fitTextRequest, {
+      boundBox: true
+    }))
+    if (cand != null) {
+      return cand
+    }
+    return fitTextToEllipseSector(fitTextRequest)
+  }
+
   const fitTextToEllipseSector = function(fitTextRequest) {
     if (normalizeAngle(fitTextRequest.ellipseSector.endAngle - fitTextRequest.ellipseSector.startAngle) < Math.PI + EPS) {
       return fitTextToConvexEllipseSector(fitTextRequest)
     }
     if (fitTextRequest.ellipseSector.startAngle < Math.PI/2 + EPS) {
-      var cand = fitTextToConvexEllipseSector(Object.assign({}, fitTextRequest, {
+      var cand = fitTextToEllipseSectorPreferBoundBox(Object.assign({}, fitTextRequest, {
         ellipseSector: Object.assign({}, fitTextRequest.ellipseSector, {
           startAngle: Math.PI/2,
           endAngle: 3*Math.PI/2
-        })
+        }),
+        preferBoundBox: true
       }))
       if (cand != null) {
         return cand
       }
     }
-    return fitTextToConvexEllipseSector(Object.assign({}, fitTextRequest, {
+    return fitTextToEllipseSectorPreferBoundBox(Object.assign({}, fitTextRequest, {
       ellipseSector: Object.assign({}, fitTextRequest.ellipseSector, {
         startAngle: Math.PI,
         endAngle: 2*Math.PI
-      })
+      }),
+      preferBoundBox: true
     }))
   }
 
