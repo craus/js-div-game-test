@@ -578,18 +578,15 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
   }
 
   var lineCountGivenWidth = function(fitTextRequest, lineWidth) {
-    var mask = 0
     var breaks = 0
     var currentLineWidth = 0
     for (var j = 0; j < fitTextRequest.words.length-1; j++) {
       currentLineWidth += fitTextRequest.words[j].length
       if (currentLineWidth > lineWidth) {
-        mask = mask | 1
         breaks += 1
         currentLineWidth = fitTextRequest.words[j].length
       }
       currentLineWidth += fitTextRequest.spaceWidth 
-      mask = mask << 1
     }   
     return breaks+1
   }
@@ -602,21 +599,34 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
   }
 
   var maskGivenLineWidth = function(fitTextRequest, lineWidth) {
+    //console.log('masking for ', lineWidth)
     var mask = 0
-    var breaks = 0
+    var cursor = 1
     var currentLineWidth = 0
     for (var j = 0; j < fitTextRequest.words.length-1; j++) {
       currentLineWidth += fitTextRequest.words[j].length
+      //console.log('added', fitTextRequest.words[j].length)
       if (currentLineWidth > lineWidth) {
-        mask = mask | 1
-        breaks += 1
+        //console.log('need break')
+        mask = mask | (cursor>>1)
+        //mask = mask | 1
         currentLineWidth = fitTextRequest.words[j].length
       }
       currentLineWidth += fitTextRequest.spaceWidth 
-      mask = mask << 1
+      cursor = cursor << 1
+      //mask = mask << 1
     }   
+    //console.log("mask for width ", lineWidth, " = ", mask)
     return mask
   }
+
+  // console.log(maskGivenLineWidth({
+  //   words: [
+  //     {length: 20},
+  //     {length: 30},
+  //   ],
+  //   spaceWidth: 1
+  // }, 50))
 
   var greedyFit = function(fitTextRequest, best) {
     for (var lines = 1; lines <= fitTextRequest.words.length; lines++) {
@@ -625,6 +635,7 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
       var cand = fitWithBreaks(fitTextRequest, mask, best)
       if (isBetterFitting(cand, best)) {
         best = cand
+        //console.log("better width: ", lineWidth)
       }
     }
     return best
@@ -639,7 +650,7 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
     }
     var sectorSquare = ellipseSectorSquare(classicEllipseSector(fitTextRequest.ellipseSector))
     if (sectorSquare < totalSquare) {
-      return null;
+      return null
     }
     if (fitWithBreaks(Object.assign({}, fitTextRequest, {words: [{length: maxWordLength}]})) == null) {
       return null
