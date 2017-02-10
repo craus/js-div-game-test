@@ -577,12 +577,16 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
     return false
   }
 
-  var lineCountGivenWidth = function(fitTextRequest, lineWidth) {
+  var lineCountGivenWidth = function(fitTextRequest, lineWidth, greedy = false) {
     var breaks = 0
     var currentLineWidth = 0
-    for (var j = 0; j < fitTextRequest.words.length-1; j++) {
+    for (var j = 0; j < fitTextRequest.words.length; j++) {
       currentLineWidth += fitTextRequest.words[j].length
-      if (currentLineWidth > lineWidth) {
+      var breakCost = j > 0 ? fitTextRequest.words[j-1].breakCost : 0
+      if (!greedy) {
+        breakCost = 0
+      }
+      if (currentLineWidth > lineWidth && breakCost <= 0 || breakCost < 0) {
         breaks += 1
         currentLineWidth = fitTextRequest.words[j].length
       }
@@ -591,22 +595,26 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
     return breaks+1
   }
 
-  var minLineWidthGivenLineCount = function(fitTextRequest, lines) {
+  var minLineWidthGivenLineCount = function(fitTextRequest, lines, greedy = false) {
     var minLineWidth = fitTextRequest.words.reduce((maxWidth, word) => Math.max(maxWidth, word.length), 0)
     var maxLineWidth = fitTextRequest.words.reduce((totalWidth, word) => totalWidth + word.length, 0) + (fitTextRequest.words.length-1)*fitTextRequest.spaceWidth 
-    var answer = leastPossible(minLineWidth, maxLineWidth, lineWidth => lineCountGivenWidth(fitTextRequest, lineWidth) < lines)
+    var answer = leastPossible(minLineWidth, maxLineWidth, lineWidth => lineCountGivenWidth(fitTextRequest, lineWidth, greedy) < lines)
     return answer
   }
 
-  var maskGivenLineWidth = function(fitTextRequest, lineWidth) {
+  var maskGivenLineWidth = function(fitTextRequest, lineWidth, greedy = false) {
     //console.log('masking for ', lineWidth)
     var mask = 0
     var cursor = 1
     var currentLineWidth = 0
-    for (var j = 0; j < fitTextRequest.words.length-1; j++) {
+    for (var j = 0; j < fitTextRequest.words.length; j++) {
       currentLineWidth += fitTextRequest.words[j].length
       //console.log('added', fitTextRequest.words[j].length)
-      if (currentLineWidth > lineWidth) {
+      var breakCost = j > 0 ? fitTextRequest.words[j-1].breakCost : 0
+      if (!greedy) {
+        breakCost = 0
+      }
+      if (currentLineWidth > lineWidth && breakCost <= 0 || breakCost < 0) {
         //console.log('need break')
         mask = mask | (cursor>>1)
         //mask = mask | 1
@@ -628,15 +636,27 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
   //   spaceWidth: 1
   // }, 50))
 
-  var greedyFit = function(fitTextRequest, best) {
+  var greedyFit = function(fitTextRequest, best, greedy = false) {
     for (var lines = 1; lines <= fitTextRequest.words.length; lines++) {
-      var lineWidth = minLineWidthGivenLineCount(fitTextRequest, lines)
-      var mask = maskGivenLineWidth(fitTextRequest, lineWidth)
+      var lineWidth = minLineWidthGivenLineCount(fitTextRequest, lines, greedy)
+      var mask = maskGivenLineWidth(fitTextRequest, lineWidth, greedy)
       var cand = fitWithBreaks(fitTextRequest, mask, best)
       if (isBetterFitting(cand, best)) {
         best = cand
         //console.log("better width: ", lineWidth)
       }
+    }
+    return best
+  }
+
+  var greedyGreedyFit = function(fitTextRequest, best) {
+    var cand = greedyFit(fitTextRequest, best, true)
+    if (isBetterFitting(cand, best)) {
+      best = cand
+    }
+    cand = greedyFit(fitTextRequest, best, false)
+    if (isBetterFitting(cand, best)) {
+      best = cand
     }
     return best
   }
@@ -658,7 +678,7 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
     var best = null
 
     if (fitTextRequest.words.length > 8) {
-      best = greedyFit(fitTextRequest, null)
+      best = greedyGreedyFit(fitTextRequest, null)
     } else {
       var maxMask = (1 << (fitTextRequest.words.length - 1)) - 1
       for (var i = maxMask; i >= 0; i--) {
