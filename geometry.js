@@ -57,6 +57,10 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
     return cur
   }
 
+  var leastPossible = function(a, b, acceptable) {
+    return -greatestPossible(-b, -a, x => acceptable(-x))
+  }
+
   var minus = function(a, b) {
     return {x: a.x-b.x, y: a.y-b.y}
   }
@@ -564,6 +568,68 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
     return result
   }
 
+  var isBetterFitting = function(cand, best) {
+    if (cand != null) {
+      if (best == null || cand.cost < best.cost || cand.cost == best.cost && cand.paddingCost < best.paddingCost) {
+        return true
+      }
+    }
+    return false
+  }
+
+  var lineCountGivenWidth = function(fitTextRequest, lineWidth) {
+    var mask = 0
+    var breaks = 0
+    var currentLineWidth = 0
+    for (var j = 0; j < fitTextRequest.words.length-1; j++) {
+      currentLineWidth += fitTextRequest.words[j].length
+      if (currentLineWidth > lineWidth) {
+        mask = mask | 1
+        breaks += 1
+        currentLineWidth = fitTextRequest.words[j].length
+      }
+      currentLineWidth += fitTextRequest.spaceWidth 
+      mask = mask << 1
+    }   
+    return breaks+1
+  }
+
+  var minLineWidthGivenLineCount = function(fitTextRequest, lines) {
+    var minLineWidth = fitTextRequest.words.reduce((maxWidth, word) => Math.max(maxWidth, word.length), 0)
+    var maxLineWidth = fitTextRequest.words.reduce((totalWidth, word) => totalWidth + word.length, 0) + (fitTextRequest.words.length-1)*fitTextRequest.spaceWidth 
+    var answer = leastPossible(minLineWidth, maxLineWidth, lineWidth => lineCountGivenWidth(fitTextRequest, lineWidth) < lines)
+    return answer
+  }
+
+  var maskGivenLineWidth = function(fitTextRequest, lineWidth) {
+    var mask = 0
+    var breaks = 0
+    var currentLineWidth = 0
+    for (var j = 0; j < fitTextRequest.words.length-1; j++) {
+      currentLineWidth += fitTextRequest.words[j].length
+      if (currentLineWidth > lineWidth) {
+        mask = mask | 1
+        breaks += 1
+        currentLineWidth = fitTextRequest.words[j].length
+      }
+      currentLineWidth += fitTextRequest.spaceWidth 
+      mask = mask << 1
+    }   
+    return mask
+  }
+
+  var greedyFit = function(fitTextRequest, best) {
+    for (var lines = 1; lines <= fitTextRequest.words.length; lines++) {
+      var lineWidth = minLineWidthGivenLineCount(fitTextRequest, lines)
+      var mask = maskGivenLineWidth(fitTextRequest, lineWidth)
+      var cand = fitWithBreaks(fitTextRequest, mask, best)
+      if (isBetterFitting(cand, best)) {
+        best = cand
+      }
+    }
+    return best
+  }
+
   var fitTextToConvexEllipseSector = function(fitTextRequest) {
     var totalSquare = 0
     var maxWordLength = 0
@@ -579,14 +645,14 @@ const { fitTextToEllipseSector, projectAngle, degreeToRad, radToDeg, toEllipseCo
       return null
     }
     var best = null
-    var maxMask = (1 << (fitTextRequest.words.length - 1)) - 1
-    for (var i = maxMask; i >= 0; i--) {
-      var cand = fitWithBreaks(fitTextRequest, i, best)
-      if (cand != null) {
-        if (best == null || cand.cost < best.cost || cand.cost == best.cost && cand.paddingCost < best.paddingCost) {
-          if (best == null) {
-            best = {cost: Number.POSITIVE_INFINITY}
-          }
+
+    if (fitTextRequest.words.length > 8) {
+      best = greedyFit(fitTextRequest, null)
+    } else {
+      var maxMask = (1 << (fitTextRequest.words.length - 1)) - 1
+      for (var i = maxMask; i >= 0; i--) {
+        var cand = fitWithBreaks(fitTextRequest, i, best)
+        if (isBetterFitting(cand, best)) {
           best = cand
         }
       }
@@ -750,78 +816,206 @@ var t0 = Date.now()
 // }))
 
 //test
+// console.log(fitTextToEllipseSector({
+//    "ellipseSector": {
+//       "rx": 212,
+//       "ry": 106,
+//       "startAngle": 0.5762623,
+//       "endAngle": -4.440892E-16
+//    },
+//    "minFieldWidth": 2.5,
+//    "align": "left",
+//    "value": "Yes, but with some reservations* 95%",
+//    "attrs": {
+//       "class": "slice-title",
+//       "fill": "#FFF"
+//    },
+//    "spaceWidth": 4,
+//    "lineHeight": 17,
+//    "words": [
+//       {
+//          "length": 29,
+//          "breakCost": 0,
+//          "value": "Yes,",
+//          "attrs": {
+//             "x": 161.96507,
+//             "y": 95.5
+//          }
+//       },
+//       {
+//          "length": 25,
+//          "breakCost": 0,
+//          "value": "but",
+//          "attrs": {
+//             "x": 194.96507,
+//             "y": 95.5
+//          }
+//       },
+//       {
+//          "length": 34,
+//          "breakCost": 0,
+//          "value": "with",
+//          "attrs": {
+//             "x": 223.96507,
+//             "y": 95.5
+//          }
+//       },
+//       {
+//          "length": 39,
+//          "breakCost": 0,
+//          "value": "some",
+//          "attrs": {
+//             "x": 161.96507,
+//             "y": 112.5
+//          }
+//       },
+//       {
+//          "length": 98,
+//          "breakCost": -10000000000,
+//          "value": "reservations*",
+//          "attrs": {
+//             "x": 204.96507,
+//             "y": 112.5
+//          }
+//       },
+//       {
+//          "length": 29,
+//          "breakCost": 0,
+//          "value": "95%",
+//          "attrs": {
+//             "x": 161.96507,
+//             "y": 129.5
+//          }
+//       }
+//    ]
+// }))
+
+// the strongest performance test
 console.log(fitTextToEllipseSector({
-   "ellipseSector": {
-      "rx": 212,
-      "ry": 106,
-      "startAngle": 0.5762623,
-      "endAngle": -4.440892E-16
-   },
-   "minFieldWidth": 2.5,
-   "align": "left",
-   "value": "Yes, but with some reservations* 95%",
-   "attrs": {
-      "class": "slice-title",
-      "fill": "#FFF"
-   },
-   "spaceWidth": 4,
-   "lineHeight": 17,
-   "words": [
-      {
-         "length": 29,
-         "breakCost": 0,
-         "value": "Yes,",
-         "attrs": {
-            "x": 161.96507,
-            "y": 95.5
-         }
-      },
-      {
-         "length": 25,
-         "breakCost": 0,
-         "value": "but",
-         "attrs": {
-            "x": 194.96507,
-            "y": 95.5
-         }
-      },
-      {
-         "length": 34,
-         "breakCost": 0,
-         "value": "with",
-         "attrs": {
-            "x": 223.96507,
-            "y": 95.5
-         }
-      },
-      {
-         "length": 39,
-         "breakCost": 0,
-         "value": "some",
-         "attrs": {
-            "x": 161.96507,
-            "y": 112.5
-         }
-      },
-      {
-         "length": 98,
-         "breakCost": -10000000000,
-         "value": "reservations*",
-         "attrs": {
-            "x": 204.96507,
-            "y": 112.5
-         }
-      },
-      {
-         "length": 29,
-         "breakCost": 0,
-         "value": "95%",
-         "attrs": {
-            "x": 161.96507,
-            "y": 129.5
-         }
-      }
-   ]
+  "ellipseSector": {
+    "rx": 212,
+    "ry": 106,
+    "startAngle": 3.141592653589793,
+    "endAngle": 6.283185307179586
+  },
+  "minFieldWidth": 2.5,
+  "align": "left",
+  "value": "B2B Marketers in North America Who Agree that a Steady Flow of Ideas is important to Marketing Success, March 2015 3,000,000%",
+  "attrs": {
+    "class": "slice-title",
+    "fill": "#FFF"
+  },
+  "spaceWidth": 4,
+  "lineHeight": 17,
+  "words": [
+    {
+      "length": 27,
+      "breakCost": 0,
+      "value": "B2B"
+    },
+    {
+      "length": 76,
+      "breakCost": 0,
+      "value": "Marketers"
+    },
+    {
+      "length": 14,
+      "breakCost": 0,
+      "value": "in"
+    },
+    {
+      "length": 42,
+      "breakCost": 0,
+      "value": "North"
+    },
+    {
+      "length": 60,
+      "breakCost": 0,
+      "value": "America"
+    },
+    {
+      "length": 33,
+      "breakCost": 0,
+      "value": "Who"
+    },
+    {
+      "length": 43,
+      "breakCost": 0,
+      "value": "Agree"
+    },
+    {
+      "length": 30,
+      "breakCost": 0,
+      "value": "that"
+    },
+    {
+      "length": 9,
+      "breakCost": 0,
+      "value": "a"
+    },
+    {
+      "length": 50,
+      "breakCost": 0,
+      "value": "Steady"
+    },
+    {
+      "length": 36,
+      "breakCost": 0,
+      "value": "Flow"
+    },
+    {
+      "length": 15,
+      "breakCost": 0,
+      "value": "of"
+    },
+    {
+      "length": 39,
+      "breakCost": 0,
+      "value": "Ideas"
+    },
+    {
+      "length": 12,
+      "breakCost": 0,
+      "value": "is"
+    },
+    {
+      "length": 73,
+      "breakCost": 0,
+      "value": "important"
+    },
+    {
+      "length": 15,
+      "breakCost": 0,
+      "value": "to"
+    },
+    {
+      "length": 75,
+      "breakCost": 0,
+      "value": "Marketing"
+    },
+    {
+      "length": 62,
+      "breakCost": 0,
+      "value": "Success,"
+    },
+    {
+      "length": 46,
+      "breakCost": 0,
+      "value": "March"
+    },
+    {
+      "length": 33,
+      "breakCost": -10000000000,
+      "value": "2015"
+    },
+    {
+      "length": 78,
+      "breakCost": 0,
+      "value": "3,000,000%"
+    }
+  ],
+  "preferBoundBox": true,
+  "boundBox": true
 }))
 
 //main precision test (padding should be 0.5)
